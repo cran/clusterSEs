@@ -1,0 +1,10 @@
+90ae0e58b2d9b1765958559054ef9f0d *DESCRIPTION
+396df852dab770eefa54561124484424 *NAMESPACE
+467dd92c0f6522729f58d21eb211da5e *R/clusterBS.R
+6d9619e69124e2615e24d6b1a102304d *R/clusterIM.R
+74577eef98418d32c0ca7c0aa3728e4f *R/clusterIMmlogit.R
+aa239086944d8d925ee8026c8a965a6f *R/clusterwild.R
+a0977985f4fdc0abbf26d60bac2a63ad *man/cluster.bs.Rd
+63451aaa3f19cfce9a48f58cc7881184 *man/cluster.im.Rd
+ed74baaf3ab1f9d0a4c5b5a670b27465 *man/cluster.im.mlogit.Rd
+421a9bda018949f9f4fc8f13a1a465bb *man/cluster.wild.Rd

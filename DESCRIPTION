@@ -1,0 +1,14 @@
+Package: clusterSEs
+Title: Calculate Various Forms of Cluster-Robust Standard Error
+Version: 1.0
+Authors@R: person("Justin", "Esarey", , "justin@justinesarey.com", role = c("aut", "cre"))
+Description: Calculates confidence intervals and p-values using cluster-adjusted standard errors (based on Ibragimov and Muller 2010, Journal of Business and Economic Statistics 28(4)), the pairs cluster bootstrapped t-statistic, and the wild cluster bootstrapped t-statistic for the GLM and mlogit models (the latter two techniques based on Cameron, Gelbach, and Miller 2008, Review of Economics and Statistics 90(3)).
+Depends: R (>= 3.1.2), sandwich, lmtest, mlogit
+License: GPL (>= 2)
+LazyData: true
+Packaged: 2015-03-03 17:03:23 UTC; jesarey
+Author: Justin Esarey [aut, cre]
+Maintainer: Justin Esarey <justin@justinesarey.com>
+NeedsCompilation: no
+Repository: CRAN
+Date/Publication: 2015-03-03 18:21:34
