@@ -4,8 +4,8 @@
 \alias{cluster.wild}
 \title{Wild Cluster Bootstrapped p-Values for Linear Family GLM}
 \usage{
-cluster.wild(mod, dat, cluster, boot.reps = 1000, report = TRUE,
-  prog.bar = TRUE)
+cluster.wild(mod, dat, cluster, ci.level = 0.95, impose.null = TRUE,
+  boot.reps = 1000, report = TRUE, prog.bar = TRUE)
 }
 \arguments{
 \item{mod}{A linear (identity link) model estimated using \code{glm}.}
@@ -13,6 +13,10 @@ cluster.wild(mod, dat, cluster, boot.reps = 1000, report = TRUE,
 \item{dat}{The data set used to estimate \code{mod}.}
 
 \item{cluster}{A formula of the clustering variable.}
+
+\item{ci.level}{What confidence level should CIs reflect? (Note: only reported when \code{impose.null == FALSE}).}
+
+\item{impose.null}{Should we impose the null Ho?}
 
 \item{boot.reps}{The number of bootstrap samples to draw.}
 
@@ -23,23 +27,30 @@ cluster.wild(mod, dat, cluster, boot.reps = 1000, report = TRUE,
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
+\item{ci}{A matrix of confidence intervals (if null not imposed).}
 }
 \description{
-This software estimates p-values using wild cluster bootstrapped t-statistics for linear family GLM models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic.
+This software estimates p-values using wild cluster bootstrapped t-statistics for linear family GLM models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic. Users may choose whether to impose the null hypothesis for independent variables; the null is never imposed for the intercept or any model that includes factor variables. Confidence intervals are only reported when the null hypothesis is \emph{not} imposed.
 }
 \note{
 Code to estimate GLM clustered standard errors by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/.
 }
 \examples{
 \dontrun{
-# predict prestige score of occupation
-require(effects)
-data(BEPS)
-linear.model <- glm(Europe ~ age + gender + economic.cond.national, data=BEPS)
-summary(linear.model)
+# predict chick weight using diet, do not impose the null hypothesis
+# because of factor variable "Diet"
+data(ChickWeight)
+weight.mod <- glm(formula = weight~Diet,data=ChickWeight)
+out <-cluster.wild(weight.mod ,dat =ChickWeight,cluster = ~Chick,boot.reps = 1000)
 
-# compute wild cluster bootstrapped p-values
-clust.wd.p <- cluster.wild(linear.model, BEPS, ~ vote, report = T)
+# impose null
+dum <- model.matrix(~ ChickWeight$Diet)
+ChickWeight$Diet2 <- as.numeric(dum[,2])
+ChickWeight$Diet3 <- as.numeric(dum[,3])
+ChickWeight$Diet4 <- as.numeric(dum[,4])
+
+weight.mod2 <- glm(formula = weight~Diet2+Diet3+Diet4,data=ChickWeight)
+out.2 <-cluster.wild(weight.mod2, dat =ChickWeight,cluster = ~Chick,boot.reps = 1000)
 }
 }
 \author{

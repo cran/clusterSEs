@@ -16,7 +16,7 @@
 #' @examples
 #' \dontrun{
 #' # predict method of hospital admission
-#' require(VGAMdat)
+#' require(VGAMdata)
 #' data(vtinpat)
 #' vtinpat$hos.num <- as.numeric(vtinpat$hospital)
 #' vtinpat$age <- as.numeric(vtinpat$age.group)
@@ -27,6 +27,13 @@
 #' # compute cluster-adjusted p-values (takes a while)
 #' clust.p <- cluster.im.mlogit(vt.mod, dat=vtinpat.mlogit, cluster = ~ hos.num, 
 #'            report=TRUE, se=TRUE, truncate=TRUE)
+#'            
+#' # compute 95% confidence intervals
+#' ci.lo <- coefficients(vt.mod) - qt(0.975, df=13)*clust.p$se
+#' ci.hi <- coefficients(vt.mod) + qt(0.975, df=13)*clust.p$se
+#' ci <- cbind(ci.lo, ci.hi)
+#' colnames(ci) <- c("95% lower bound", "95% upper bound")
+#' ci
 #' }
 #' @rdname cluster.im.mlogit
 #' @import mlogit

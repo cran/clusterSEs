@@ -4,8 +4,8 @@
 \alias{cluster.bs}
 \title{Pairs Cluster Bootstrapped p-Values For GLM}
 \usage{
-cluster.bs(mod, dat, cluster, boot.reps = 1000, stratify = FALSE,
-  cluster.se = TRUE, report = TRUE, prog.bar = TRUE)
+cluster.bs(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
+  stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{glm}.}
@@ -13,6 +13,8 @@ cluster.bs(mod, dat, cluster, boot.reps = 1000, stratify = FALSE,
 \item{dat}{The data set used to estimate \code{mod}.}
 
 \item{cluster}{A formula of the clustering variable.}
+
+\item{ci.level}{What confidence level should CIs reflect?}
 
 \item{boot.reps}{The number of bootstrap samples to draw.}
 
@@ -27,6 +29,7 @@ cluster.bs(mod, dat, cluster, boot.reps = 1000, stratify = FALSE,
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
+\item{ci}{A matrix of confidence intervals.}
 }
 \description{
 This software estimates p-values using pairs cluster bootstrapped t-statistics for GLM models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic.

@@ -1,9 +1,9 @@
-#' Pairs Cluster Bootstrapped p-Values For GLM
+#' Pairs Cluster Bootstrapped p-Values For mlogit
 #'
-#' This software estimates p-values using pairs cluster bootstrapped t-statistics for GLM models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic. 
+#' This software estimates p-values using pairs cluster bootstrapped t-statistics for multinomial logit models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic. 
 #'
-#' @param mod A model estimated using \code{glm}.
-#' @param dat The data set used to estimate \code{mod}.
+#' @param mod A model estimated using \code{mlogit}.
+#' @param dat The data set used to estimate \code{mod}, but in standard (not \code{mlogit.data}) form..
 #' @param cluster A formula of the clustering variable.
 #' @param ci.level What confidence level should CIs reflect?
 #' @param boot.reps The number of bootstrap samples to draw.
@@ -16,26 +16,35 @@
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
-#' @note Code to estimate GLM clustered standard errors by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/.
+#' @note Code to estimate GLM clustered standard errors by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/, although modified slightly to work for \code{mlogit} models.
 #' @examples
 #' \dontrun{
-#' # predict whether respondent has a university degree
-#' require(effects)
-#' data(WVS)
-#' logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(link="logit"))
-#' summary(logit.model)
+#' # predict method of hospital admission
+#' require(VGAMdata)
+#' data(vtinpat)
 #' 
-#' # compute pairs cluster bootstrapped p-values
-#' clust.bs.p <- cluster.bs(logit.model, WVS, ~ country, report = T)
+#' # to save time, take a sample of this data
+#' set.seed(32149)
+#' idx <- sample(1:dim(vtinpat)[1], 1000, replace=F)
+#' vtinpat <- vtinpat[idx,]
+#' vtinpat$hos.num <- as.numeric(vtinpat$hospital)
+#' vtinpat$age <- as.numeric(vtinpat$age.group)
+#' vtinpat.mlogit <- mlogit.data(vtinpat, choice = "admit", shape="wide")
+#' vt.mod <- mlogit(admit ~ 0 | age + sex, data = vtinpat.mlogit)
+#' summary(vt.mod)
+#' 
+#' # compute cluster bootstrapped p-values (takes a while)
+#' clust.p <- cluster.bs.mlogit(vt.mod, dat=vtinpat, cluster = ~ hos.num, report=TRUE)
 #' }
-#' @rdname cluster.bs
+#' @rdname cluster.bs.mlogit
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
+#' @import mlogit
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427.
 #' @export
 
-cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
+cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
   
   form <- mod$formula                                                    # what is the formula of this model?  
   variables <- all.vars(form)                                            # what variables are in this model?
@@ -47,22 +56,30 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
   ind.variables <- names(coefficients(mod))                              # what independent variables are in this model?
   
   
-  # load in a function to create clustered standard errors
-  # by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/
-  cl   <- function(dat, fm, cluster){
+  # load in a function to create clustered standard errors for mlogit models
+  # initial code by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/
+  # slightly modified for mlogit models by Justin Esarey on 3/3/2015
+  
+  cl.mlogit   <- function(fm, cluster){
+    
+    # fm: a fitted mlogit model
+    # cluster: a data vector with the cluster
+    #          identity of each observation in fm
+    
     #require(sandwich, quietly = TRUE)
     #require(lmtest, quietly = TRUE)
     M <- length(unique(cluster))
     N <- length(cluster)
-    K <- fm$rank
+    K <- length(coefficients(fm))
     dfc <- (M/(M-1))*((N-1)/(N-K))
     uj  <- apply(estfun(fm),2, function(x) tapply(x, cluster, sum));
     vcovCL <- dfc*sandwich(fm, meat.=crossprod(uj)/N)
-    coeftest(fm, vcovCL) }
+    coeftest(fm, vcovCL) 
+  }
   
    if(cluster.se == T){
      
-     se.clust <- cl(dat, mod, clust)[ind.variables,2]               # retrieve the clustered SEs
+     se.clust <- cl.mlogit(mod, clust)[ind.variables,2]               # retrieve the clustered SEs
      beta.mod <- coefficients(mod)[ind.variables]                   # retrieve the estimated coefficients
      w <- beta.mod / se.clust                                       # calculate the t-test statistic
      
@@ -105,21 +122,19 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
     }
     
     boot.dat <- dat[boot.ind,]                                                         # create the bootstrapped data
+    boot.dat <- mlogit.data(boot.dat, choice = "admit", shape="wide")
 
     # run a model on the bootstrap replicate data
-    boot.mod <- suppressWarnings(tryCatch(glm(form, data = boot.dat, family = mod$family), 
+    boot.mod <- suppressWarnings(tryCatch(mlogit(form, data = boot.dat), 
                 error = function(e){return(NA)}))                                    
 
-    if(max(is.na(boot.mod)) == FALSE ){
-      if(boot.mod$converged == 0){boot.mod <- NA}                      # judge GLM as failure if convergence not achieved
-    }
-    fail <- max(is.na(boot.mod))                                     # determine whether the GLM process created an error
+    fail <- max(is.na(boot.mod))                                     # determine whether the mlogit process created an error
     
-    if(fail==0){                                                     # proceed if the GLM model was not in error
+    if(fail==0){                                                     # proceed if the mlogit model was not in error
 
       if(cluster.se == T){
         
-        se.boot <- tryCatch(cl(boot.dat, boot.mod, boot.clust)[ind.variables,2],
+        se.boot <- tryCatch(cl.mlogit(boot.mod, boot.clust)[ind.variables,2],
                    error = function(e){return(NA)}, 
                    warning = function(w){return(NA)})                              # retrieve the bootstrap clustered SE
         beta.boot <- tryCatch(coefficients(boot.mod)[ind.variables],
