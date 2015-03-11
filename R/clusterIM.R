@@ -1,18 +1,19 @@
-#' Cluster-Adjusted Standard Errors and p-Values for GLM
+#' Cluster-Adjusted Confidence Intervals and p-Values for GLM
 #'
-#' Computes p-values and standard errors for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values are computed based on a t/normal distribution of the cluster-specific estimates.
+#' Computes p-values and confidence intervals for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
 #'
 #' @param mod A model estimated using \code{glm}.
 #' @param dat The data set used to estimate \code{mod}.
 #' @param cluster A formula of the clustering variable.
+#' @param ci.level What confidence level should CIs reflect?
 #' @param report Should a table of results be printed to the console?
-#' @param se Should standard errors be returned?
 #' @param drop Should clusters within which a model cannot be estimated be dropped?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
-#' \item{se}{The estimated standard errors (if requested).}
+#' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
+#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
 #' @examples
 #' \dontrun{
 #' # predict whether respondent has a university degree
@@ -22,20 +23,13 @@
 #' summary(logit.model)
 #' 
 #' # compute cluster-adjusted p-values
-#' clust.p <- cluster.im(logit.model, WVS, ~ country, report = T, se = TRUE, drop = FALSE)
-#' 
-#' # compute 95% confidence intervals
-#' ci.lo <- coefficients(logit.model) - qt(0.975, df=3)*clust.p$se
-#' ci.hi <- coefficients(logit.model) + qt(0.975, df=3)*clust.p$se
-#' ci <- cbind(ci.lo, ci.hi)
-#' colnames(ci) <- c("95% lower bound", "95% upper bound")
-#' ci
+#' clust.p <- cluster.im(logit.model, WVS, ~ country, ci.level = 0.95, report = T, drop = FALSE) 
 #' }
 #' @rdname cluster.im
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. 
 #' @export
 
-cluster.im<-function(mod, dat, cluster, report = TRUE, se = FALSE, drop = FALSE){
+cluster.im<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
   
   form <- mod$formula                                     # what is the formula of this model?
   
@@ -89,18 +83,27 @@ cluster.im<-function(mod, dat, cluster, report = TRUE, se = FALSE, drop = FALSE)
 
   t.hat <- sqrt(G) * (b.hat / s.hat)                        # calculate t-statistic
   
-  se.hat <- coefficients(mod) / t.hat
-
   # compute p-val based on # of clusters
   p.out <- 2*pmin( pt(t.hat, df = G-1, lower.tail = TRUE), pt(t.hat, df = G-1, lower.tail = FALSE) )
   
-
-
+  
+  # compute CIs
+  ci.lo <- b.hat - qt((1-ci.level)/2, df=(G-1), lower.tail=FALSE)*(s.hat/sqrt(G))
+  ci.hi <- b.hat + qt((1-ci.level)/2, df=(G-1), lower.tail=FALSE)*(s.hat/sqrt(G))
+  
   out <- matrix(p.out, ncol=1)
   rownames(out) <- ind.variables
 
   out.p <- cbind( ind.variables, round(out, 3))
   out.p <- rbind(c("variable name", "cluster-adjusted p-value"), out.p)
+  
+  out.ci <- cbind(ci.lo, ci.hi)
+  rownames(out.ci) <- ind.variables
+  colnames(out.ci) <- c("CI lower", "CI higher")
+  
+  print.ci <- cbind(ind.variables, ci.lo, ci.hi)
+  print.ci <- rbind(c("variable name", "CI lower", "CI higher"), print.ci)
+  
 
   printmat <- function(m){
     write.table(format(m, justify="right"), row.names=F, col.names=F, quote=F, sep = "   ")
@@ -110,23 +113,20 @@ cluster.im<-function(mod, dat, cluster, report = TRUE, se = FALSE, drop = FALSE)
     cat("\n", "Cluster-Adjusted p-values: ", "\n", "\n")
     printmat(out.p)
     
+    cat("\n", "Confidence Intervals (centered on cluster-averaged results):", "\n", "\n")
+    printmat(print.ci)
+        
     if(G.o > G){
       cat("\n", "Note:", G.o - G, "clusters were dropped due to non-convergence.", "\n", "\n")
     }
     
   }
+ 
   
-  if(se == T){
-    out.list<-list()
-    out.list[["p.values"]]<-out
-    out.list[["se"]]<-se.hat
-    return(invisible(out.list))
-  }else{
-    out.list<-list()
-    out.list[["p.values"]]<-out
-    return(invisible(out.list))
-  }
-  
+  out.list<-list()
+  out.list[["p.values"]]<-out
+  out.list[["ci"]]<-out.ci
+  return(invisible(out.list))
   
 }
 

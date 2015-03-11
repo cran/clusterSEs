@@ -45,8 +45,9 @@ data(vtinpat)
 
 # to save time, take a sample of this data
 set.seed(32149)
-idx <- sample(1:dim(vtinpat)[1], 1000, replace=F)
+idx <- sample(1:dim(vtinpat)[1], 5000, replace=F)
 vtinpat <- vtinpat[idx,]
+
 vtinpat$hos.num <- as.numeric(vtinpat$hospital)
 vtinpat$age <- as.numeric(vtinpat$age.group)
 vtinpat.mlogit <- mlogit.data(vtinpat, choice = "admit", shape="wide")

@@ -1,23 +1,30 @@
-#' Cluster-Adjusted Standard Errors and p-Values for mlogit
+#' Cluster-Adjusted Confidence Intervals and p-Values for mlogit
 #'
-#' Computes p-values and standard errors for multinomial logit models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values are computed based on a t/normal distribution of the cluster-specific estimates.
+#' Computes p-values and confidence intervals for multinomial logit models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
 #'
 #' @param mod A model estimated using \code{mlogit}.
 #' @param dat The data set used to estimate \code{mod}.
 #' @param cluster A formula of the clustering variable.
+#' @param ci.level What confidence level should CIs reflect?
 #' @param report Should a table of results be printed to the console?
-#' @param se Should standard errors be returned?
 #' @param truncate Should outlying cluster-specific beta estimates be excluded?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
-#' \item{se}{The estimated standard errors (if requested).}
+#' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
+#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
 #' @examples
 #' \dontrun{
 #' # predict method of hospital admission
 #' require(VGAMdata)
 #' data(vtinpat)
+#' 
+#' # to save time, take a sample of this data
+#' set.seed(32149)
+#' idx <- sample(1:dim(vtinpat)[1], 5000, replace=F)
+#' vtinpat <- vtinpat[idx,]
+#' 
 #' vtinpat$hos.num <- as.numeric(vtinpat$hospital)
 #' vtinpat$age <- as.numeric(vtinpat$age.group)
 #' vtinpat.mlogit <- mlogit.data(vtinpat, choice = "admit", shape="wide")
@@ -26,21 +33,14 @@
 #' 
 #' # compute cluster-adjusted p-values (takes a while)
 #' clust.p <- cluster.im.mlogit(vt.mod, dat=vtinpat.mlogit, cluster = ~ hos.num, 
-#'            report=TRUE, se=TRUE, truncate=TRUE)
-#'            
-#' # compute 95% confidence intervals
-#' ci.lo <- coefficients(vt.mod) - qt(0.975, df=13)*clust.p$se
-#' ci.hi <- coefficients(vt.mod) + qt(0.975, df=13)*clust.p$se
-#' ci <- cbind(ci.lo, ci.hi)
-#' colnames(ci) <- c("95% lower bound", "95% upper bound")
-#' ci
+#'            ci.level = 0.95, report=TRUE, truncate=TRUE)          
 #' }
 #' @rdname cluster.im.mlogit
 #' @import mlogit
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. 
 #' @export
 
-cluster.im.mlogit<-function(mod, dat, cluster, report = TRUE, se=FALSE, truncate = FALSE){
+cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, truncate = FALSE){
   
   form <- mod$formula                                     # what is the formula of this model?
   
@@ -95,15 +95,23 @@ cluster.im.mlogit<-function(mod, dat, cluster, report = TRUE, se=FALSE, truncate
   
   t.hat <- sqrt(G) * (b.hat / s.hat)                        # calculate t-statistic
   
-  se.hat <- coefficients(mod) / t.hat
-  
   # compute p-val based on # of clusters
   p.out <- 2*pmin( pt(t.hat, df = G-1, lower.tail = TRUE), pt(t.hat, df = G-1, lower.tail = FALSE) )
   
-  
-  
+  # compute CIs
+  ci.lo <- b.hat - qt((1-ci.level)/2, df=(G-1), lower.tail=FALSE)*(s.hat/sqrt(G))
+  ci.hi <- b.hat + qt((1-ci.level)/2, df=(G-1), lower.tail=FALSE)*(s.hat/sqrt(G))
+    
   out <- matrix(p.out, ncol=1)
   out.p <- cbind( names(coefficients(summary(mod))), round(out,3) )
+  
+  out.ci <- cbind(ci.lo, ci.hi)
+  rownames(out.ci) <- names(coefficients(summary(mod)))
+  colnames(out.ci) <- c("CI lower", "CI higher")
+  
+  print.ci <- cbind(names(coefficients(summary(mod))), ci.lo, ci.hi)
+  print.ci <- rbind(c("variable name", "CI lower", "CI higher"), print.ci)
+  
 
   printmat <- function(m){
     write.table(format(m, justify="right"), row.names=F, col.names=F, quote=F, sep = "   ")
@@ -113,20 +121,18 @@ cluster.im.mlogit<-function(mod, dat, cluster, report = TRUE, se=FALSE, truncate
     
     cat("\n", "Cluster-Adjusted p-values: ", "\n", "\n")
     printmat(out.p)
+    
+    cat("\n", "Confidence Intervals (centered on cluster-averaged results):", "\n", "\n")
+    printmat(print.ci)
         
     if(dropped > 0){cat("\n", "Note:", dropped, "clusters were dropped as outliers.", "\n", "\n")}
     
   }
   
-  if(se == T){
-    out.list<-list()
-    out.list[["p.values"]]<-out
-    out.list[["se"]]<-se.hat
-    return(invisible(out.list))
-  }else{
-    out.list<-list()
-    out.list[["p.values"]]<-out
-    return(invisible(out.list))
-  }
+
+  out.list<-list()
+  out.list[["p.values"]]<-out
+  out.list[["ci"]]<-out.ci
+  return(invisible(out.list))
   
 }

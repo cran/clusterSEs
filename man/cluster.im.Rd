@@ -2,9 +2,10 @@
 % Please edit documentation in R/clusterIM.R
 \name{cluster.im}
 \alias{cluster.im}
-\title{Cluster-Adjusted Standard Errors and p-Values for GLM}
+\title{Cluster-Adjusted Confidence Intervals and p-Values for GLM}
 \usage{
-cluster.im(mod, dat, cluster, report = TRUE, se = FALSE, drop = FALSE)
+cluster.im(mod, dat, cluster, ci.level = 0.95, report = TRUE,
+  drop = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{glm}.}
@@ -13,19 +14,22 @@ cluster.im(mod, dat, cluster, report = TRUE, se = FALSE, drop = FALSE)
 
 \item{cluster}{A formula of the clustering variable.}
 
-\item{report}{Should a table of results be printed to the console?}
+\item{ci.level}{What confidence level should CIs reflect?}
 
-\item{se}{Should standard errors be returned?}
+\item{report}{Should a table of results be printed to the console?}
 
 \item{drop}{Should clusters within which a model cannot be estimated be dropped?}
 }
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
-\item{se}{The estimated standard errors (if requested).}
+\item{ci}{A matrix of confidence intervals.}
 }
 \description{
-Computes p-values and standard errors for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values are computed based on a t/normal distribution of the cluster-specific estimates.
+Computes p-values and confidence intervals for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
+}
+\note{
+Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
 }
 \examples{
 \dontrun{
@@ -36,14 +40,7 @@ logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(l
 summary(logit.model)
 
 # compute cluster-adjusted p-values
-clust.p <- cluster.im(logit.model, WVS, ~ country, report = T, se = TRUE, drop = FALSE)
-
-# compute 95\% confidence intervals
-ci.lo <- coefficients(logit.model) - qt(0.975, df=3)*clust.p$se
-ci.hi <- coefficients(logit.model) + qt(0.975, df=3)*clust.p$se
-ci <- cbind(ci.lo, ci.hi)
-colnames(ci) <- c("95\% lower bound", "95\% upper bound")
-ci
+clust.p <- cluster.im(logit.model, WVS, ~ country, ci.level = 0.95, report = T, drop = FALSE)
 }
 }
 \author{

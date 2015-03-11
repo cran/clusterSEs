@@ -2,9 +2,9 @@
 % Please edit documentation in R/clusterIMmlogit.R
 \name{cluster.im.mlogit}
 \alias{cluster.im.mlogit}
-\title{Cluster-Adjusted Standard Errors and p-Values for mlogit}
+\title{Cluster-Adjusted Confidence Intervals and p-Values for mlogit}
 \usage{
-cluster.im.mlogit(mod, dat, cluster, report = TRUE, se = FALSE,
+cluster.im.mlogit(mod, dat, cluster, ci.level = 0.95, report = TRUE,
   truncate = FALSE)
 }
 \arguments{
@@ -14,25 +14,34 @@ cluster.im.mlogit(mod, dat, cluster, report = TRUE, se = FALSE,
 
 \item{cluster}{A formula of the clustering variable.}
 
-\item{report}{Should a table of results be printed to the console?}
+\item{ci.level}{What confidence level should CIs reflect?}
 
-\item{se}{Should standard errors be returned?}
+\item{report}{Should a table of results be printed to the console?}
 
 \item{truncate}{Should outlying cluster-specific beta estimates be excluded?}
 }
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
-\item{se}{The estimated standard errors (if requested).}
+\item{ci}{A matrix of confidence intervals.}
 }
 \description{
-Computes p-values and standard errors for multinomial logit models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values are computed based on a t/normal distribution of the cluster-specific estimates.
+Computes p-values and confidence intervals for multinomial logit models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
+}
+\note{
+Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
 }
 \examples{
 \dontrun{
 # predict method of hospital admission
 require(VGAMdata)
 data(vtinpat)
+
+# to save time, take a sample of this data
+set.seed(32149)
+idx <- sample(1:dim(vtinpat)[1], 5000, replace=F)
+vtinpat <- vtinpat[idx,]
+
 vtinpat$hos.num <- as.numeric(vtinpat$hospital)
 vtinpat$age <- as.numeric(vtinpat$age.group)
 vtinpat.mlogit <- mlogit.data(vtinpat, choice = "admit", shape="wide")
@@ -41,14 +50,7 @@ summary(vt.mod)
 
 # compute cluster-adjusted p-values (takes a while)
 clust.p <- cluster.im.mlogit(vt.mod, dat=vtinpat.mlogit, cluster = ~ hos.num,
-           report=TRUE, se=TRUE, truncate=TRUE)
-
-# compute 95\% confidence intervals
-ci.lo <- coefficients(vt.mod) - qt(0.975, df=13)*clust.p$se
-ci.hi <- coefficients(vt.mod) + qt(0.975, df=13)*clust.p$se
-ci <- cbind(ci.lo, ci.hi)
-colnames(ci) <- c("95\% lower bound", "95\% upper bound")
-ci
+           ci.level = 0.95, report=TRUE, truncate=TRUE)
 }
 }
 \author{
