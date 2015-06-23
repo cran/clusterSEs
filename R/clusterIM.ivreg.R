@@ -1,8 +1,8 @@
-#' Cluster-Adjusted Confidence Intervals and p-Values for GLM
+#' Cluster-Adjusted Confidence Intervals And p-Values For GLM
 #'
 #' Computes p-values and confidence intervals for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
 #'
-#' @param mod A model estimated using \code{glm}.
+#' @param mod A model estimated using \code{ivreg}.
 #' @param dat The data set used to estimate \code{mod}.
 #' @param cluster A formula of the clustering variable.
 #' @param ci.level What confidence level should CIs reflect?
@@ -16,31 +16,34 @@
 #' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
 #' @examples
 #' \dontrun{
-#' # predict whether respondent has a university degree
-#' require(effects)
-#' data(WVS)
-#' logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(link="logit"))
-#' summary(logit.model)
+#' 
+#' # example: pooled IV analysis of employment
+#' require(plm)
+#' require(AER)
+#' data(EmplUK)
+#' EmplUK$lag.wage <- lag(EmplUK$wage)
+#' emp.iv <- ivreg(emp ~ wage + log(capital+1) | output + lag.wage + log(capital+1), data = EmplUK)
 #' 
 #' # compute cluster-adjusted p-values
-#' clust.p <- cluster.im(logit.model, WVS, ~ country, ci.level = 0.95, report = T, drop = FALSE) 
+#' cluster.im.e <- cluster.im.ivreg(mod=emp.iv, dat=EmplUK, cluster = ~firm)
+#' 
 #' }
-#' @rdname cluster.im
+#' @import AER
+#' @rdname cluster.im.ivreg
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. 
 #' @export
 
-cluster.im<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
+cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
   
-  form <- mod$formula                                     # what is the formula of this model?
+  form <- mod$formula                                                    # what is the formula of this model?
+  variables <- all.vars(form)                                            # what variables are in this model?
+  clust.name <- all.vars(cluster)                                        # what is the name of the clustering variable?
+  used.idx <- which(rownames(dat) %in% rownames(mod$model))              # what were the actively used observations in the model?
+  dat <- dat[used.idx,]                                                  # keep only active observations (drop the missing)
+  clust <- as.vector(unlist(dat[[clust.name]]))                          # store cluster index in convenient vector
+  G<-length(unique(clust))                                               # how many clusters are in this model?
+  ind.variables <- names(coefficients(mod))                              # what independent variables are in this model?
   
-  variables <- all.vars(form)                             # what variables are in this model?
-  dat.t <- subset(dat, select = variables)                # keep only relevant variables
-  dat.t$clust <- subset(dat, select = all.vars(cluster))  # add the cluster variable into dat.t (for NA omission)
-  dat <- na.omit(dat.t)                                   # drop the NAs
-  clust <- as.vector(unlist(dat$clust))                   # reintegrate cluster variable w/o NA obs
-  G<-length(unique(clust))                                # how many clusters are in this model?
-  ind.variables <- names(coefficients(mod))               # what independent variables are in this model?
- 
   
   b.clust <- matrix(data = NA, nrow = G, ncol = length(ind.variables))     # a matrix to store the betas
   n.clust <- c() 
@@ -48,18 +51,25 @@ cluster.im<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = F
   G.o <- G
   for(i in 1:G){
      
-    clust.ind <- which(clust == unique(clust)[i])                         # select obs in cluster i
+    clust.ind <- which(clust == unique(clust)[i])                        # select obs in cluster i
     
-    clust.dat <- dat[clust.ind,]                                                         # create the cluster i data set
-    clust.mod <- suppressWarnings(glm(form, data = clust.dat, family = mod$family))      # run a model on the cluster i data
+    clust.dat <- dat[clust.ind,]                                         # create the cluster i data set
+    clust.mod.call <- mod$call                                           # recover the original model call
+    clust.mod.call[[3]] <- quote(clust.dat)                              # modify the model call to use the cluster data set
+    clust.mod <- suppressWarnings(tryCatch(eval(clust.mod.call),         # run a model on the cluster i data
+                              error = function(e){return(NULL)}))       
+    
+    
+    fail <- is.null(clust.mod)                                           # determine whether the ivreg model was correctly fitted
+    
     
     # should we stop if one cluster-specific model does not converge?
     if(drop==FALSE){
-      if(clust.mod$converged == F){stop("cluster-specific model did not converge", call.=FALSE)}
+      if(fail==T){stop("cluster-specific model returned error", call.=FALSE)}
       b.clust[i,] <- coefficients(clust.mod)                                                 # store the cluster i beta coefficient
       
     }else{
-      if(clust.mod$converged == T){
+      if(fail==F){
         b.clust[i,] <- coefficients(clust.mod)                                               # store the cluster i beta coefficient
       }else{
         b.clust[i,] <- NA
@@ -117,7 +127,7 @@ cluster.im<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = F
     printmat(print.ci)
         
     if(G.o > G){
-      cat("\n", "Note:", G.o - G, "clusters were dropped due to non-convergence.", "\n", "\n")
+      cat("\n", "Note:", G.o - G, "clusters were dropped due to estimation problems.", "\n", "\n")
     }
     
   }

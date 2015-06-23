@@ -1,8 +1,8 @@
-#' Pairs Cluster Bootstrapped p-Values For GLM
+#' Pairs Cluster Bootstrapped p-Values For Regression With Instrumental Variables
 #'
-#' This software estimates p-values using pairs cluster bootstrapped t-statistics for GLM models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic. 
+#' This software estimates p-values using pairs cluster bootstrapped t-statistics for instrumental variables regression models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic. 
 #'
-#' @param mod A model estimated using \code{glm}.
+#' @param mod A model estimated using \code{ivreg}.
 #' @param dat The data set used to estimate \code{mod}.
 #' @param cluster A formula of the clustering variable.
 #' @param ci.level What confidence level should CIs reflect?
@@ -16,46 +16,63 @@
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
-#' @note Code to estimate GLM clustered standard errors by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/.
+#' @note Code to estimate clustered standard errors by Mahmood Arai: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/. Cluster SE degrees of freedom correction = (M/(M-1)) with M = the number of clusters.
 #' @examples
 #' \dontrun{
-#' # predict whether respondent has a university degree
-#' require(effects)
-#' data(WVS)
-#' logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(link="logit"))
-#' summary(logit.model)
+#' 
+#' # example one: predict cigarette consumption
+#' data("CigarettesSW", package = "AER") 
+#' CigarettesSW$rprice <- with(CigarettesSW, price/cpi)
+#' CigarettesSW$rincome <- with(CigarettesSW, income/population/cpi)
+#' CigarettesSW$tdiff <- with(CigarettesSW, (taxs - tax)/cpi)
+#' fm <- ivreg(log(packs) ~ log(rprice) + log(rincome) | 
+#'     log(rincome) + tdiff + I(tax/cpi), data = CigarettesSW)
 #' 
 #' # compute pairs cluster bootstrapped p-values
-#' clust.bs.p <- cluster.bs(logit.model, WVS, ~ country, report = T)
+#' cluster.bs.c <- cluster.bs.ivreg(fm, dat = CigarettesSW, cluster = ~state, report = T)
+#' 
+#' 
+#' 
+#' # example two: pooled IV analysis of employment
+#' require(plm)
+#' require(AER)
+#' data(EmplUK)
+#' EmplUK$lag.wage <- lag(EmplUK$wage)
+#' emp.iv <- ivreg(emp ~ wage + log(capital+1) | output + lag.wage + log(capital+1), data = EmplUK)
+#' 
+#' # compute cluster-adjusted p-values
+#' cluster.bs.e <- cluster.bs.ivreg(mod = emp.iv, dat = EmplUK, cluster = ~firm)
+#' 
 #' }
-#' @rdname cluster.bs
+#' @rdname cluster.bs.ivreg
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
+#' @import AER
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427.
 #' @export
 
-cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
+cluster.bs.ivreg<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
   
-  form <- mod$formula                                                    # what is the formula of this model?  
-  variables <- all.vars(form)                                            # what variables are in this model?
-  dat.t <- subset(dat, select = variables)                               # keep only relevant variables
-  dat.t$clust <- subset(dat, select = all.vars(cluster))                 # add the cluster variable into dat.t (for NA omission)
-  dat <- na.omit(dat.t)                                                  # drop the NAs
-  clust <- as.vector(unlist(dat$clust))                                  # reintegrate cluster variable w/o NA obs
-  G<-length(unique(clust))                                               # how many clusters are in this model?
-  ind.variables <- names(coefficients(mod))                              # what independent variables are in this model?
+  form <- mod$formula                                               # what is the formula of this model?  
+  variables <- all.vars(form)                                       # what variables are in this model?
+  clust.name <- all.vars(cluster)                                   # what is the name of the clustering variable?
+  used.idx <- which(rownames(dat) %in% rownames(mod$model))         # what were the actively used observations in the model?
+  dat <- dat[used.idx,]                                             # keep only active observations (drop the missing)
+  clust <- as.vector(unlist(dat[[clust.name]]))                     # store cluster index in convenient vector
+  G<-length(unique(clust))                                          # how many clusters are in this model?
+  ind.variables <- names(coefficients(mod))                         # what independent variables are in this model?
   
   
   # load in a function to create clustered standard errors
-  # by Mahmood Ara: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/
+  # by Mahmood Arai: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/
   cl   <- function(dat, fm, cluster){
     #require(sandwich, quietly = TRUE)
     #require(lmtest, quietly = TRUE)
     M <- length(unique(cluster))
     N <- length(cluster)
     K <- fm$rank
-    dfc <- (M/(M-1))*((N-1)/(N-K))
+    dfc <- (M/(M-1))
     uj  <- apply(estfun(fm),2, function(x) tapply(x, cluster, sum));
     vcovCL <- dfc*sandwich(fm, meat.=crossprod(uj)/N)
     coeftest(fm, vcovCL) }
@@ -89,7 +106,7 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
     
     for(k in 1:G){
 
-      obs.sel <- which(clust == unique(clust)[boot.sel[k]])                           # which observations are in the sampled cluster?
+      obs.sel <- which(clust == unique(clust)[boot.sel[k]])               # which observations are in the sampled cluster?
       if(stratify==T){
         
         obs.samp <- sample(obs.sel, size = length(obs.sel), replace=T)    # sample randomly from the selected cluster
@@ -100,22 +117,21 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
         boot.ind <- c(boot.ind, obs.sel)                                  # append the selected obs index to existing index
                   
       }
-      boot.clust <- c(boot.clust, rep(k, length(obs.sel)))             # store the new bootstrap cluster index
+      boot.clust <- c(boot.clust, rep(k, length(obs.sel)))                # store the new bootstrap cluster index
       
     }
     
     boot.dat <- dat[boot.ind,]                                                         # create the bootstrapped data
 
     # run a model on the bootstrap replicate data
-    boot.mod <- suppressWarnings(tryCatch(glm(form, data = boot.dat, family = mod$family), 
-                error = function(e){return(NA)}))                                    
-
-    if(max(is.na(boot.mod)) == FALSE ){
-      if(boot.mod$converged == 0){boot.mod <- NA}                      # judge GLM as failure if convergence not achieved
-    }
-    fail <- max(is.na(boot.mod))                                     # determine whether the GLM process created an error
+    boot.mod.call <- mod$call
+    boot.mod.call[[3]] <- quote(boot.dat)
     
-    if(fail==0){                                                     # proceed if the GLM model was not in error
+    boot.mod <- suppressWarnings(tryCatch(eval(boot.mod.call), error = function(e){return(NULL)}))                                     
+    
+    fail <- is.null(boot.mod)                                        # determine whether the ivreg process created an error
+    
+    if(fail==0){                                                     # proceed if the model was not in error
 
       if(cluster.se == T){
         
@@ -140,7 +156,7 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
       }
     
     }else{
-      w.store[i,] <- NA                                                  # if model didn't converge, store NA as a result 
+      w.store[i,] <- NA                                                  # if model didn't estimate correctly, store NA as a result 
     }
   
   }
@@ -175,7 +191,7 @@ cluster.bs<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, strat
   colnames(out) <- c("clustered bootstrap p-value")
   rownames(out) <- ind.variables
   out.p <- cbind(ind.variables, out)
-  out.p <- rbind(c("variable name", "clustered bootstrap p-value"), out.p)
+  out.p <- rbind(c("variable name", "cluster bootstrap p-value"), out.p)
   
 
   printmat <- function(m){
