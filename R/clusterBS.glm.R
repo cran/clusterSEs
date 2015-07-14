@@ -47,6 +47,10 @@
 #' 
 #' }
 #' @rdname cluster.bs.glm
+#' @import stats
+#' @importFrom utils write.table
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils txtProgressBar
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich

@@ -43,6 +43,10 @@
 #' @import Formula
 #' @import plm
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427.
+#' @import stats
+#' @importFrom utils write.table
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils txtProgressBar
 #' @export
 #' 
 

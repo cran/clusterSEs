@@ -13,7 +13,7 @@
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
-#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
+#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates. Any cluster for which all coefficients cannot be estimated will be automatically dropped from the analysis. If truncate = TRUE, any cluster for which any coefficient is more than 6 times the interquartile range from the cross-cluster mean will also be dropped as an outlier.
 #' @examples
 #' \dontrun{
 #' 
@@ -31,6 +31,8 @@
 #' @rdname cluster.im.mlogit
 #' @importFrom mlogit mlogit mlogit.data hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. 
+#' @import stats
+#' @importFrom utils write.table
 #' @export
 
 cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, truncate = FALSE){
@@ -75,15 +77,15 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
 
       b.clust[i,] <- coefficients(clust.mod)                                  # store the cluster i beta coefficient
 
-    }else{
-      
-      dropped.nc <- dropped.nc + 1                                            # otherwise record model failure
-      
     }
   }
   
   # purge non-converged clusters
   b.clust <- na.omit(b.clust)
+  dropped.nc <- length(attr(b.clust, "na.action"))                            # record number of models dropped
+  
+  G.t <- dim(b.clust)[1]
+  if(G.t == 0){stop("all clusters were dropped (see help file).")}
   
   # remove clusters with outlying betas
   dropped <- 0                                                                 # store number of outlying estimates
@@ -108,6 +110,7 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
   }
   
   G <- dim(b.clust)[1]
+  if(G == 0){stop("all clusters were dropped (see help file).")}
   
   b.hat <- colMeans(b.clust)                                # calculate the avg beta across clusters
   b.dev <- sweep(b.clust, MARGIN = 2, STATS = b.hat)        # sweep out the avg betas
@@ -147,8 +150,8 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
     cat("\n", "Confidence Intervals (centered on cluster-averaged results):", "\n", "\n")
     printmat(print.ci)
 
-    if(dropped.nc > 0){cat("\n", "Note:", dropped.nc, "clusters were dropped due to estimation problems.", "\n", "\n")}
-    if(dropped > 0){cat("\n", "Note:", dropped, "clusters were dropped as outliers.", "\n", "\n")}
+    if(dropped.nc > 0){cat("\n", "Note:", dropped.nc, "clusters were dropped due to missing coefficients (see help file).", "\n", "\n")}
+    if(dropped > 0){cat("\n", "Note:", dropped, "clusters were dropped as outliers (see help file).", "\n", "\n")}
     
   }
   

@@ -13,7 +13,7 @@
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
-#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates.
+#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates. If drop = TRUE, any cluster for which all coefficients cannot be estimated will be automatically dropped from the analysis.
 #' @examples
 #' \dontrun{
 #' 
@@ -31,6 +31,8 @@
 #' @import AER
 #' @rdname cluster.im.ivreg
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. 
+#' @import stats
+#' @importFrom utils write.table
 #' @export
 
 cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
@@ -65,7 +67,7 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
     
     # should we stop if one cluster-specific model does not converge?
     if(drop==FALSE){
-      if(fail==T){stop("cluster-specific model returned error", call.=FALSE)}
+      if(fail==T){stop("cluster-specific model returned error (try drop = TRUE)", call.=FALSE)}
       b.clust[i,] <- coefficients(clust.mod)                                                 # store the cluster i beta coefficient
       
     }else{
@@ -82,6 +84,8 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
     b.clust <- na.omit(b.clust)
     G <- dim(b.clust)[1]
   }
+  
+  if(G == 0){stop("all clusters were dropped (see help file).")}
   
   b.hat <- colMeans(b.clust)                                # calculate the avg beta across clusters
   b.dev <- sweep(b.clust, MARGIN = 2, STATS = b.hat)        # sweep out the avg betas
@@ -127,7 +131,7 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
     printmat(print.ci)
         
     if(G.o > G){
-      cat("\n", "Note:", G.o - G, "clusters were dropped due to estimation problems.", "\n", "\n")
+      cat("\n", "Note:", G.o - G, "clusters were dropped (see help file).", "\n", "\n")
     }
     
   }
