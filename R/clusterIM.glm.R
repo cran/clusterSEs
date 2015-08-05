@@ -8,12 +8,13 @@
 #' @param ci.level What confidence level should CIs reflect?
 #' @param report Should a table of results be printed to the console?
 #' @param drop Should clusters within which a model cannot be estimated be dropped?
+#' @param truncate Should outlying cluster-specific beta estimates be excluded?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
 #' @author Justin Esarey
-#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates. If drop = TRUE, any cluster for which all coefficients cannot be estimated will be automatically dropped from the analysis.
+#' @note Confidence intervals are centered on the cluster averaged estimate, which can diverge from original model estimates if clusters have different numbers of observations. Consequently, confidence intervals may not be centered on original model estimates. If drop = TRUE, any cluster for which all coefficients cannot be estimated will be automatically dropped from the analysis. If truncate = TRUE, any cluster for which any coefficient is more than 6 times the interquartile range from the cross-cluster mean will also be dropped as an outlier.
 #' @examples
 #' \dontrun{
 #' 
@@ -33,7 +34,7 @@
 #' @importFrom utils write.table
 #' @export
 
-cluster.im.glm<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
+cluster.im.glm<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE, truncate = FALSE){
   
   
   form <- mod$formula                                                   # what is the formula of this model?
@@ -80,11 +81,38 @@ cluster.im.glm<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop
   }
 
   if(drop==TRUE){
+    dropped.nc <- 0                                                             # store number of non-converged clusters
     b.clust <- na.omit(b.clust)
-    G <- dim(b.clust)[1]
+    dropped.nc <- length(attr(b.clust, "na.action"))                            # record number of models dropped
+    G.t <- dim(b.clust)[1]
+    if(G.t == 0){stop("all clusters were dropped (see help file).")}
   }
   
+  # remove clusters with outlying betas
+  dropped <- 0                                                                 # store number of outlying estimates
+  if(truncate==TRUE){                                                          # if drop outlying betas...
+    
+    IQR <- apply(FUN=quantile, MARGIN=2, X=b.clust, probs=c(0.25, 0.75))       # calculate inter-quartile range
+    
+    b.clust.save <- b.clust                                                    # non-outlying beta identifier
+    for(i in 1:dim(b.clust)[2]){
+      b.clust.save[,i] <- ifelse( abs(b.clust[,i]) >                           # determine which estimates to save
+            (abs(mean(b.clust[,i])) + 6*abs(IQR[2,i] - IQR[1,i])), 0, 1)
+    }
+    
+    save.clust <- apply(X=b.clust.save, MARGIN=1, FUN=min)                     # which rows had outlying betas
+    dropped <- dim(b.clust)[1] - sum(save.clust)                               # how many clusters dropped?
+    
+    b.clust.adj <- cbind(b.clust, save.clust)                                  # append the outlier ID to beta matrix
+    
+    b.clust <- subset(b.clust,                                                 # drop the outlying betas
+            subset=(save.clust==1), select=1:dim(b.clust)[2])
+    
+  }
+  
+  G <- dim(b.clust)[1]
   if(G == 0){stop("all clusters were dropped (see help file).")}
+  
   
   b.hat <- colMeans(b.clust)                                # calculate the avg beta across clusters
   b.dev <- sweep(b.clust, MARGIN = 2, STATS = b.hat)        # sweep out the avg betas
