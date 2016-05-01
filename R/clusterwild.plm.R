@@ -21,21 +21,13 @@
 #' require(plm)
 #' data(EmplUK)
 #'
-#' emp.iv <- plm(emp ~ wage + log(capital+1) | output + lag(wage, 1) + 
-#'           log(capital+1), data = EmplUK, model = "within")
-#' cluster.wild.plm(mod=emp.iv, dat=EmplUK, cluster="group", ci.level = 0.95, 
-#'           boot.reps = 1000, report = TRUE, prog.bar = TRUE)
+#' emp.1 <- plm(emp ~ wage + log(capital+1), data = EmplUK, model = "within",
+#'              index=c("firm", "year"))
+#' cluster.wild.plm(mod=emp.1, dat=EmplUK, cluster="group", ci.level = 0.95,
+#'         boot.reps = 1000, report = TRUE, prog.bar = TRUE)
 #' 
-#' # cluster on time; need to set variable lag
-#' # (resampling on time would interfere with functional lag)
-#' EmplUK.plm <- pdata.frame(EmplUK, index=c("firm", "year"))
-#' w <- EmplUK.plm$wage
-#' EmplUK.plm$lag.wage <- lag(w, 1) 
-#' 
-#' emp.iv.2 <- plm(emp ~ wage + log(capital+1) | output + lag.wage + 
-#'             log(capital+1), data = EmplUK.plm, model = "within")
-#' 
-#' cluster.wild.plm(mod=emp.iv.2, dat=EmplUK.plm, cluster="time", ci.level = 0.95, 
+#' # cluster on time
+#' cluster.wild.plm(mod=emp.1, dat=EmplUK, cluster="time", ci.level = 0.95, 
 #'             boot.reps = 1000, report = TRUE, prog.bar = TRUE)
 #' 
 #' }
