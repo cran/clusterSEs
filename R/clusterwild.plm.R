@@ -34,7 +34,7 @@
 #' @rdname cluster.wild.plm
 #' @import Formula
 #' @import plm
-#' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427.
+#' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @import stats
 #' @importFrom utils write.table
 #' @importFrom utils setTxtProgressBar
@@ -53,17 +53,17 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
     clust <- attr(mod$mod, "index")[,1]                               # which clusters were used?                               
     clust.name <- colnames(attr(mod$mod, "index"))[1]                 # what is the name of the cluster?
     clust.full <- attr(dat, "index")[,1]                              # all clusters in the dataset
-    used.idx <- as.numeric(rownames(mod$model))                       # what were the actively used observations in the model?
+    used.idx <- which(rownames(dat) %in% rownames(mod$model))         # what were the actively used observations in the model?
     G<-length(unique(clust))                                          # how many clusters are in this model?
     
   }
   if(cluster=="time"){
     
-    cat("\n", "\n", "Note: specify lags as variables when clustering on time", "\n")
+    cat("\n", "\n", "Note: create new variable containing lag when clustering on time", "\n")
     clust <- attr(mod$mod, "index")[,2]                               # which clusters were used?                               
     clust.name <- colnames(attr(mod$mod, "index"))[2]                 # what is the name of the cluster?
     clust.full <- attr(dat, "index")[,2]                              # all clusters in the dataset
-    used.idx <- as.numeric(rownames(mod$model))                       # what were the actively used observations in the model?
+    used.idx <- which(rownames(dat) %in% rownames(mod$model))         # what were the actively used observations in the model?
     G<-length(unique(clust))                                          # how many clusters are in this model?
     
   }
