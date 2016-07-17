@@ -1,17 +1,17 @@
 Package: clusterSEs
 Title: Calculate Cluster-Robust p-Values and Confidence Intervals
-Version: 2.3.1
+Version: 2.3.2
 Authors@R: person("Justin", "Esarey", , "justin@justinesarey.com", role = c("aut", "cre"))
 Description: Calculate p-values and confidence intervals using cluster-adjusted
     t-statistics (based on Ibragimov and Muller (2010) <DOI:10.1198/jbes.2009.08046>, pairs cluster bootstrapped t-statistics, and wild cluster bootstrapped t-statistics (the latter two techniques based on Cameron, Gelbach, and Miller (2008) <DOI:10.1162/rest.90.3.414>. Procedures are included for use with GLM, ivreg, plm (pooling or fixed effects), and mlogit models.
-Depends: R (>= 3.2.1), AER, Formula, plm, stats
+Depends: R (>= 3.3.1), AER, Formula, plm, stats
 Imports: sandwich, lmtest, mlogit, utils
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1
 NeedsCompilation: no
-Packaged: 2016-06-06 16:49:32 UTC; justi
+Packaged: 2016-07-17 00:39:43 UTC; justi
 Author: Justin Esarey [aut, cre]
 Maintainer: Justin Esarey <justin@justinesarey.com>
 Repository: CRAN
-Date/Publication: 2016-06-06 20:36:32
+Date/Publication: 2016-07-17 13:37:39

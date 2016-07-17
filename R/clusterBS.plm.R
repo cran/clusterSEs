@@ -51,7 +51,7 @@
 cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps = 1000, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
   
   if( min( class(dat) != "pdata.frame" ) ){                           # if data not pdata.frame
-    dat <- pdata.frame(dat, index=colnames(dat)[1:2])                 # convert it
+    dat <- pdata.frame(dat, index=colnames(dat)[1:2], row.names=F)    # convert it
   }
   
   if(cluster=="group"){                                               
