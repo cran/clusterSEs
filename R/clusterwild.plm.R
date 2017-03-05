@@ -45,7 +45,13 @@
 cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, report = TRUE, prog.bar = TRUE){
   
   if( min( class(dat) != "pdata.frame" ) ){                             # if data not pdata.frame
+
+    # print a warning about auto-conversion of data
+    cat("\n", "\n", "Note: auto-converting data to pdata.frame; first two variables MUST be group and time indices.", "\n",        
+      "See ?pdata.frame and consider manually converting data to pdata.frame.", "\n", "\n")
+
     dat <- pdata.frame(dat, index=colnames(dat)[1:2], row.names=F)      # convert it
+
   }
   
   if(cluster=="group"){                                               
@@ -85,12 +91,12 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   dat$dv.new[used.idx] <- mod$model[,1]                     # add transformed DV into data set
   form.new <- update(form, dv.new ~ .)                      # formula subbing in transformed DV
   
-  # check to see whether any IVs are factors
-  fac <- c()
-  for(i in 1:length(ind.variables.data)){
-    fac[i] <- is.factor(dat[,ind.variables.data[i]])
-  }
-  fac <- max(fac)
+  # check to see whether any IVs are factors (not needed)
+  # fac <- c()
+  # for(i in 1:length(ind.variables.data)){
+  #   fac[i] <- is.factor(dat[,ind.variables.data[i]])
+  # }
+  # fac <- max(fac)
   
   if(prog.bar==TRUE){cat("Wild Cluster bootstrapping w/o imposing null...", "\n")}
 
@@ -125,13 +131,19 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   }
   if(prog.bar==TRUE){close(pb)}
   
-  comp.fun<-function(vec2, vec1){as.numeric(vec1>vec2)}                            # a simple function comparing v1 to v2
-  p.store.s <- t(apply(X = abs(w.store), FUN=comp.fun, MARGIN = 1, vec1 = abs(w))) # compare the BS test stats to orig. result
-  p.store <- 1 - ( colSums(p.store.s) / dim(w.store)[1] )                          # calculate the cluster bootstrap p-value
-  
+  # Note: thanks to Mortiz Marbach for providing a bug fix to this section!
+  comp.fun<-function(vec2, vec1){as.numeric(vec1>vec2)}                                      # a simple function comparing v1 to v2
 
-  # compute critical t-statistics for CIs
-  crit.t <- apply(X=abs(w.store), MARGIN=2, FUN=quantile, probs=ci.level )
+  if ( length(ind.variables)==1 ){
+      p.store.s <- matrix(as.double(abs(w)) > as.double(abs(w.store)), ncol=1)               # compare the BS test stats to orig. result
+      crit.t <- quantile(abs(w.store),ci.level)                                              # compute critical t-statistics for CIs
+  } else {
+      p.store.s <- t(apply(X = abs(w.store), FUN = comp.fun, MARGIN = 1, vec1 = abs(w)))     # compare the BS test stats to orig. result
+      crit.t <- apply(X = abs(w.store), MARGIN = 2, FUN = quantile, probs = ci.level)        # compute critical t-statistics for CIs
+  }     
+  p.store <- 1 - (colSums(p.store.s)/boot.reps)                                              # calculate the cluster bootstrap p-value  
+
+  # compute confidence bounds
   ci.lo <- beta.mod - crit.t*se.clust
   ci.hi <- beta.mod + crit.t*se.clust
 
