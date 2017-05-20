@@ -5,7 +5,7 @@
 \title{Cluster-Adjusted Confidence Intervals And p-Values For GLM}
 \usage{
 cluster.im.glm(mod, dat, cluster, ci.level = 0.95, report = TRUE,
-  drop = FALSE, truncate = FALSE)
+  drop = FALSE, truncate = FALSE, return.vcv = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{glm}.}
@@ -21,11 +21,15 @@ cluster.im.glm(mod, dat, cluster, ci.level = 0.95, report = TRUE,
 \item{drop}{Should clusters within which a model cannot be estimated be dropped?}
 
 \item{truncate}{Should outlying cluster-specific beta estimates be excluded?}
+
+\item{return.vcv}{Should a VCV matrix and the means of cluster-specific coefficient estimates be returned?}
 }
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
 \item{ci}{A matrix of confidence intervals.}
+\item{vcv.hat}{Optional: A cluster-level variance-covariance matrix for coefficient estimates.}
+\item{beta.bar}{Optional: A vector of means for cluster-specific coefficient estimates.}
 }
 \description{
 Computes p-values and confidence intervals for GLM models based on cluster-specific model estimation (Ibragimov and Muller 2010). A separate model is estimated in each cluster, and then p-values and confidence intervals are computed based on a t/normal distribution of the cluster-specific estimates.
@@ -36,7 +40,10 @@ Confidence intervals are centered on the cluster averaged estimate, which can di
 \examples{
 \dontrun{
 
-# example: predict whether respondent has a university degree
+#####################################################################
+# example one: predict whether respondent has a university degree
+#####################################################################
+
 require(effects)
 data(WVS)
 logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(link="logit"))
@@ -45,12 +52,60 @@ summary(logit.model)
 # compute cluster-adjusted p-values
 clust.im.p <- cluster.im.glm(logit.model, WVS, ~ country, report = T)
 
+############################################################################
+# example two: linear model of whether respondent has a university degree
+#              with interaction between gender and age + country FEs
+############################################################################
+
+WVS$degree.n <- as.numeric(WVS$degree)
+WVS$gender.n <- as.numeric(WVS$gender)
+WVS$genderXage <- WVS$gender.n * WVS$age
+lin.model <- glm(degree.n ~ gender.n + age + genderXage + religion + as.factor(country), data=WVS)
+
+# compute marginal effect of male gender on probability of obtaining a university degree
+# using conventional standard errors
+age.vec <- seq(from=18, to=90, by=1)
+me.age <- coefficients(lin.model)[2] + coefficients(lin.model)[4]*age.vec
+plot(me.age ~ age.vec, type="l", ylim=c(-0.1, 0.1), xlab="age", 
+     ylab="ME of male gender on Pr(university degree)")
+se.age <- sqrt( vcov(lin.model)[2,2] + vcov(lin.model)[4,4]*(age.vec)^2 + 
+                2*vcov(lin.model)[2,4]*age.vec)
+ci.h <- me.age + qt(0.975, lower.tail=T, df=lin.model$df.residual) * se.age
+ci.l <- me.age - qt(0.975, lower.tail=T, df=lin.model$df.residual) * se.age
+lines(ci.h ~ age.vec, lty=2)
+lines(ci.l ~ age.vec, lty=2)
+
+
+# cluster on country, compute CIs for marginal effect of gender on degree attainment
+# drop the FEs (absorbed into cluster-level coefficients)
+lin.model.n <- glm(degree.n ~ gender.n + age + genderXage + religion, data=WVS)
+clust.im.result <- cluster.im.glm(lin.model.n, WVS, ~ country, report = T, return.vcv = T)
+# compute ME using average of cluster-level estimates (CIs center on this)
+me.age.im <- clust.im.result$beta.bar[2] + clust.im.result$beta.bar[4]*age.vec
+se.age.im <- sqrt( clust.im.result$vcv[2,2] + clust.im.result$vcv[4,4]*(age.vec)^2 +
+                   2*clust.im.result$vcv[2,4]*age.vec)
+# center the CIs on the ME using average of cluster-level estimates
+# important: divide by sqrt(G) to convert SE of cluster-level estimates 
+#            into SE of the mean, where G = number of clusters
+G <- length(unique(WVS$country))
+ci.h.im <- me.age.im + qt(0.975, lower.tail=T, df=(G-1)) * se.age.im/sqrt(G)
+ci.l.im <- me.age.im - qt(0.975, lower.tail=T, df=(G-1)) * se.age.im/sqrt(G)
+plot(me.age.im ~ age.vec, type="l", ylim=c(-0.2, 0.2), xlab="age", 
+     ylab="ME of male gender on Pr(university degree)")
+lines(ci.h.im ~ age.vec, lty=2)
+lines(ci.l.im ~ age.vec, lty=2)
+# for comparison, here's the ME estimate and CIs from the baseline model
+lines(me.age ~ age.vec, lty=1, col="gray")
+lines(ci.h ~ age.vec, lty=3, col="gray")
+lines(ci.l ~ age.vec, lty=3, col="gray")
+
 }
+}
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
 }
 \author{
 Justin Esarey
 }
-\references{
-Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
-}
-

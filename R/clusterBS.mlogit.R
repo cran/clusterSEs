@@ -11,6 +11,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param unique.id Should id (from \code{mlogit.data}) be made unique for bootstrap replicates (= TRUE) or repeated across replicates (= FALSE)?
+#' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -20,7 +21,9 @@
 #' @examples
 #' \dontrun{
 #' 
+#' #######################################
 #' # example one: train ticket selection
+#' #######################################
 #' # see http://cran.r-project.org/web/packages/mlogit/vignettes/mlogit.pdf
 #' require(mlogit)
 #' data("Train", package="mlogit")
@@ -36,9 +39,9 @@
 #' cluster.bs.tr <- cluster.bs.mlogit(ml.Train, Tr, ~ id, boot.reps=100)
 #' 
 #' 
-#' 
+#' ##################################################################
 #' # example two: predict type of heating system installed in house
-#' # note: few reps to speed up example
+#' ##################################################################
 #' require(mlogit)
 #' data("Heating", package = "mlogit")
 #' H <- Heating
@@ -46,7 +49,7 @@
 #' m <- mlogit(depvar~ic+oc, H.ml)
 #' 
 #' # compute pairs cluster bootstrapped p-values
-#' cluster.bs.h <- cluster.bs.mlogit(m, H.ml, ~ region, boot.reps=100)
+#' cluster.bs.h <- cluster.bs.mlogit(m, H.ml, ~ region, boot.reps=1000)
 #' 
 #' }
 #' @rdname cluster.bs.mlogit
@@ -58,14 +61,16 @@
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
 #' @importFrom mlogit mlogit mlogit.data hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
+#' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @export
 
-cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, cluster.se = TRUE, report = TRUE, prog.bar = TRUE, unique.id = TRUE){
+cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, cluster.se = TRUE, 
+                            report = TRUE, prog.bar = TRUE, unique.id = TRUE, output.replicates = FALSE){
     
   form <- mod$formula                                                    # what is the formula of this model?  
   variables <- all.vars(form)                                            # what variables are in this model?
-  used.idx <- which(rownames(dat) %in% rownames(mod$mod))                  # what observations are used?
+  used.idx <- which(rownames(dat) %in% rownames(mod$mod))                # what observations are used?
   dat <- dat[used.idx,]                                                  # keep only active observations
   ind.variables <- names(coefficients(mod))                              # what independent variables are in this model?
   "%w/o%" <- function(x, y) x[!x %in% y]                                 # create a without function (see ?match)
@@ -116,6 +121,10 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
      w <- beta.mod / se.beta                                        # calculate the t-test statistic
 
    }
+  
+  # keep track of the beta bootstrap replicates for possible output
+  rep.store <- matrix(data=NA, nrow=boot.reps, ncol=length(beta.mod))
+  colnames(rep.store) <- ind.variables
   
   w.store <- matrix(data=NA, nrow=boot.reps, ncol=length(ind.variables))      # store bootstrapped test statistics
   
@@ -200,6 +209,9 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
                      warning = function(w){return(NA)})                            # store the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                              # store the bootstrap test statistic
         
+        rep.store[i,] <- beta.boot                                                 # store the bootstrap beta for output
+        
+        
       }else{
         
         se.boot <- tryCatch(summary(boot.mod)$CoefTable[ind.variables,2],
@@ -209,11 +221,15 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
                      error = function(e){return(NA)}, 
                      warning = function(w){return(NA)})                             # retrieve the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                               # calculate the t-test statistic
+        
+        rep.store[i,] <- beta.boot                                                  # store the bootstrap beta for output
+        
                 
       }
     
     }else{
-      w.store[i,] <- NA                                                  # if model didn't converge, store NA as a result 
+      w.store[i,] <- NA                                                  # if model didn't converge, store NA as a result
+      rep.store[i,] <- NA
     }
   
   }
@@ -273,6 +289,7 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
   out.list<-list()
   out.list[["p.values"]]<-out
   out.list[["ci"]] <- out.ci
+  if(output.replicates == TRUE){out.list[["replicates"]] <- rep.store}
   return(invisible(out.list))
   
 }

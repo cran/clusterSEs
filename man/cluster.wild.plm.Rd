@@ -5,7 +5,7 @@
 \title{Wild Cluster Bootstrapped p-Values For PLM}
 \usage{
 cluster.wild.plm(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  report = TRUE, prog.bar = TRUE)
+  report = TRUE, prog.bar = TRUE, output.replicates = FALSE)
 }
 \arguments{
 \item{mod}{A "within" model estimated using \code{plm}.}
@@ -21,6 +21,8 @@ cluster.wild.plm(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{report}{Should a table of results be printed to the console?}
 
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
+
+\item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
 }
 \value{
 A list with the elements
@@ -48,10 +50,11 @@ cluster.wild.plm(mod=emp.1, dat=EmplUK, cluster="time", ci.level = 0.95,
 
 }
 }
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
+}
 \author{
 Justin Esarey
 }
-\references{
-Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
-}
-

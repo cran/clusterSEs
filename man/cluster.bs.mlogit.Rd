@@ -5,7 +5,8 @@
 \title{Pairs Cluster Bootstrapped p-Values For mlogit}
 \usage{
 cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  cluster.se = TRUE, report = TRUE, prog.bar = TRUE, unique.id = TRUE)
+  cluster.se = TRUE, report = TRUE, prog.bar = TRUE, unique.id = TRUE,
+  output.replicates = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -25,6 +26,8 @@ cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
 
 \item{unique.id}{Should id (from \code{mlogit.data}) be made unique for bootstrap replicates (= TRUE) or repeated across replicates (= FALSE)?}
+
+\item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
 }
 \value{
 A list with the elements
@@ -40,7 +43,9 @@ Code to estimate GLM clustered standard errors by Mahmood Arai: http://thetarzan
 \examples{
 \dontrun{
 
+#######################################
 # example one: train ticket selection
+#######################################
 # see http://cran.r-project.org/web/packages/mlogit/vignettes/mlogit.pdf
 require(mlogit)
 data("Train", package="mlogit")
@@ -56,9 +61,9 @@ ml.Train <- mlogit(choice ~ price + time + change + comfort | -1, Tr)
 cluster.bs.tr <- cluster.bs.mlogit(ml.Train, Tr, ~ id, boot.reps=100)
 
 
-
+##################################################################
 # example two: predict type of heating system installed in house
-# note: few reps to speed up example
+##################################################################
 require(mlogit)
 data("Heating", package = "mlogit")
 H <- Heating
@@ -66,14 +71,15 @@ H.ml <- mlogit.data(H, shape="wide", choice="depvar", varying=c(3:12))
 m <- mlogit(depvar~ic+oc, H.ml)
 
 # compute pairs cluster bootstrapped p-values
-cluster.bs.h <- cluster.bs.mlogit(m, H.ml, ~ region, boot.reps=100)
+cluster.bs.h <- cluster.bs.mlogit(m, H.ml, ~ region, boot.reps=1000)
 
 }
+}
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 }
 \author{
 Justin Esarey
 }
-\references{
-Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
-}
-

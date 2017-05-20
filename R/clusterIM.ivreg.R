@@ -8,6 +8,7 @@
 #' @param ci.level What confidence level should CIs reflect?
 #' @param report Should a table of results be printed to the console?
 #' @param drop Should clusters within which a model cannot be estimated be dropped?
+#' @param return.vcv Should a VCV matrix and the means of cluster-specific coefficient estimates be returned?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -30,12 +31,13 @@
 #' }
 #' @import AER
 #' @rdname cluster.im.ivreg
+#' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
 #' @import stats
 #' @importFrom utils write.table
 #' @export
 
-cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE){
+cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, drop = FALSE, return.vcv = FALSE){
   
   form <- mod$formula                                                    # what is the formula of this model?
   variables <- all.vars(form)                                            # what variables are in this model?
@@ -97,6 +99,8 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
 
   t.hat <- sqrt(G) * (b.hat / s.hat)                        # calculate t-statistic
   
+  names(b.hat) <- ind.variables
+  
   # compute p-val based on # of clusters
   p.out <- 2*pmin( pt(t.hat, df = G-1, lower.tail = TRUE), pt(t.hat, df = G-1, lower.tail = FALSE) )
   
@@ -137,9 +141,11 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
   }
  
   
-  out.list<-list()
-  out.list[["p.values"]]<-out
-  out.list[["ci"]]<-out.ci
+  out.list <- list()
+  out.list[["p.values"]] <- out
+  out.list[["ci"]] <- out.ci
+  if(return.vcv == TRUE){out.list[["vcv.hat"]] <- vcv.hat}
+  if(return.vcv == TRUE){out.list[["beta.bar"]] <- b.hat}
   return(invisible(out.list))
   
 }

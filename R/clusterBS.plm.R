@@ -10,6 +10,7 @@
 #' @param cluster.se Use clustered standard errors (= TRUE) or ordinary SEs (= FALSE) for bootstrap replicates.
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
+#' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -45,10 +46,12 @@
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
+#' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @export
 
-cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps = 1000, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
+cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps = 1000,
+                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
   
   if( min( class(dat) != "pdata.frame" ) ){                           # if data not pdata.frame
     dat <- pdata.frame(dat, index=colnames(dat)[1:2], row.names=F)    # convert it
@@ -96,6 +99,10 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
    }
   
   w.store <- matrix(data=NA, nrow=boot.reps, ncol=length(ind.variables))    # store bootstrapped test statistics
+  
+  # keep track of the beta bootstrap replicates for possible output
+  rep.store <- matrix(data=NA, nrow=boot.reps, ncol=length(beta.mod))
+  colnames(rep.store) <- ind.variables
   
   if(prog.bar==TRUE){pb <- txtProgressBar(min = 0, max = boot.reps, initial = 0, style = 3)}
   for(i in 1:boot.reps){
@@ -152,6 +159,9 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
                      warning = function(w){return(NA)})                            # store the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                              # store the bootstrap test statistic
         
+        rep.store[i,] <- beta.boot                                                 # store the bootstrap beta for output
+        
+        
       }else{
         
         se.boot <- tryCatch(summary(boot.mod)$coefficients[ind.variables,2],
@@ -161,11 +171,15 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
                      error = function(e){return(NA)}, 
                      warning = function(w){return(NA)})                             # retrieve the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                               # calculate the t-test statistic
+        
+        rep.store[i,] <- beta.boot                                                 # store the bootstrap beta for output
+        
                 
       }
     
     }else{
       w.store[i,] <- NA                                                  # if model didn't converge, store NA as a result 
+      rep.store[i,] <- NA
     }
   
   }
@@ -225,6 +239,7 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
   out.list<-list()
   out.list[["p.values"]]<-out
   out.list[["ci"]] <- out.ci
+  if(output.replicates == TRUE){out.list[["replicates"]] <- rep.store}
   return(invisible(out.list))
   
 }

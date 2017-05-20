@@ -9,6 +9,7 @@
 #' @param boot.reps The number of bootstrap samples to draw.
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
+#' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -34,6 +35,7 @@
 #' @rdname cluster.wild.plm
 #' @import Formula
 #' @import plm
+#' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @import stats
 #' @importFrom utils write.table
@@ -42,7 +44,8 @@
 #' @export
 #' 
 
-cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, report = TRUE, prog.bar = TRUE){
+cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, 
+                           report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
   
   if( min( class(dat) != "pdata.frame" ) ){                             # if data not pdata.frame
 
@@ -104,6 +107,10 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   w.store <- matrix(data=NA, nrow=boot.reps, 
                 ncol=length(ind.variables))                    # store bootstrapped test statistics
   
+  # keep track of the beta bootstrap replicates for possible output
+  rep.store <- matrix(data=NA, nrow=boot.reps, ncol=length(beta.mod))
+  colnames(rep.store) <- ind.variables
+  
   resid <- residuals(mod)                                      # get the residuals for the model
   
   if(prog.bar==TRUE){pb <- txtProgressBar(min = 0, max = boot.reps, initial = 0, style = 3)}
@@ -126,6 +133,8 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
     se.boot <- sqrt(diag(vcovHC(boot.mod, cluster=cluster)))                   # retrieve the bootstrap clustered SE
     beta.boot <- coefficients(boot.mod)[ind.variables]                         # store the bootstrap beta coefficient
     w.store[i,] <- (beta.boot-beta.mod) / se.boot                              # store the bootstrap test statistic
+    
+    rep.store[i,] <- beta.boot                                       # store the bootstrap beta for output
     
     
   }
@@ -181,6 +190,7 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   out.list<-list()
   out.list[["p.values"]]<-out
   out.list[["ci"]] <- out.ci
+  if(output.replicates == TRUE){out.list[["replicates"]] <- rep.store}
   return(invisible(out.list))
   
   

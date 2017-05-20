@@ -5,7 +5,8 @@
 \title{Pairs Cluster Bootstrapped p-Values For Regression With Instrumental Variables}
 \usage{
 cluster.bs.ivreg(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE)
+  stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE,
+  output.replicates = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{ivreg}.}
@@ -25,11 +26,14 @@ cluster.bs.ivreg(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{report}{Should a table of results be printed to the console?}
 
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
+
+\item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
 }
 \value{
 A list with the elements
 \item{p.values}{A matrix of the estimated p-values.}
 \item{ci}{A matrix of confidence intervals.}
+\item{replicates}{Optional: A matrix of the coefficient estimates from each cluster bootstrap replicate.}
 }
 \description{
 This software estimates p-values using pairs cluster bootstrapped t-statistics for instrumental variables regression models (Cameron, Gelbach, and Miller 2008). The data set is repeatedly re-sampled by cluster, a model is estimated, and inference is based on the sampling distribution of the pivotal (t) statistic.
@@ -40,7 +44,9 @@ Code to estimate clustered standard errors by Mahmood Arai: http://thetarzan.wor
 \examples{
 \dontrun{
 
+##############################################
 # example one: predict cigarette consumption
+##############################################
 data("CigarettesSW", package = "AER") 
 CigarettesSW$rprice <- with(CigarettesSW, price/cpi)
 CigarettesSW$rincome <- with(CigarettesSW, income/population/cpi)
@@ -52,8 +58,9 @@ fm <- ivreg(log(packs) ~ log(rprice) + log(rincome) |
 cluster.bs.c <- cluster.bs.ivreg(fm, dat = CigarettesSW, cluster = ~state, report = T)
 
 
-
+################################################
 # example two: pooled IV analysis of employment
+################################################
 require(plm)
 require(AER)
 data(EmplUK)
@@ -65,10 +72,11 @@ cluster.bs.e <- cluster.bs.ivreg(mod = emp.iv, dat = EmplUK, cluster = ~firm)
 
 }
 }
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
+}
 \author{
 Justin Esarey
 }
-\references{
-Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
-}
-

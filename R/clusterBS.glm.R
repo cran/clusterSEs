@@ -11,16 +11,20 @@
 #' @param cluster.se Use clustered standard errors (= TRUE) or ordinary SEs (= FALSE) for bootstrap replicates.
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
+#' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
 #' \item{ci}{A matrix of confidence intervals.}
+#' \item{replicates}{Optional: A matrix of the coefficient estimates from each cluster bootstrap replicate.}
 #' @author Justin Esarey
 #' @note Code to estimate GLM clustered standard errors by Mahmood Arai: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/. Cluster SE degrees of freedom correction = (M/(M-1)) with M = the number of clusters.
 #' @examples
 #' \dontrun{
-#'
+#' 
+#' ##################################################################
 #' # example one: predict whether respondent has a university degree
+#' ##################################################################
 #' require(effects)
 #' data(WVS)
 #' logit.model <- glm(degree ~ religion + gender + age, data=WVS, family=binomial(link="logit"))
@@ -29,9 +33,10 @@
 #' # compute pairs cluster bootstrapped p-values
 #' clust.bs.p <- cluster.bs.glm(logit.model, WVS, ~ country, report = T)
 #' 
-#' 
-#' 
+#'   
+#' ######################################
 #' # example two: predict chicken weight
+#' ######################################
 #' rm(list=ls())
 #' data(ChickWeight)
 #' 
@@ -45,6 +50,63 @@
 #' # compute pairs cluster bootstrapped p-values
 #' clust.bs.w <- cluster.bs.glm(weight.mod2, ChickWeight, ~ Chick, report = T)
 #' 
+#' 
+#' ###################################################################
+#' # example three: murder rate by U.S. state, with interaction term
+#' ###################################################################
+#' rm(list=ls())
+#' require(datasets)
+#' 
+#' state.x77.dat <- data.frame(state.x77)
+#' state.x77.dat$Region <- state.region
+#' state.x77.dat$IncomeXHS <- state.x77.dat$Income * state.x77.dat$HS.Grad
+#' income.mod <- glm( Murder ~ Income + HS.Grad + IncomeXHS , data=state.x77.dat)
+#' 
+#' # compute pairs cluster bootstrapped p-values
+#' clust.bs.inc <- cluster.bs.glm(income.mod, state.x77.dat, ~ Region, 
+#'                                report = T, output.replicates=T, boot.reps=10000)
+#' 
+#' # compute effect of income on murder rate, by percentage of HS graduates
+#' # using conventional standard errors
+#' HS.grad.vec <- seq(from=38, to=67, by=1)
+#' me.income <- coefficients(income.mod)[2] + coefficients(income.mod)[4]*HS.grad.vec
+#' plot(me.income ~ HS.grad.vec, type="l", ylim=c(-0.0125, 0.0125), 
+#'      xlab="% HS graduates", ylab="ME of income on murder rate")
+#' se.income <- sqrt( vcov(income.mod)[2,2] + vcov(income.mod)[4,4]*(HS.grad.vec)^2 +
+#'                    2*vcov(income.mod)[2,4]*HS.grad.vec )
+#' ci.h <- me.income + qt(0.975, lower.tail=T, df=46) * se.income
+#' ci.l <- me.income - qt(0.975, lower.tail=T, df=46) * se.income
+#' lines(ci.h ~ HS.grad.vec, lty=2)
+#' lines(ci.l ~ HS.grad.vec, lty=2)
+#' 
+#' # use pairs cluster bootstrap to compute CIs, including bootstrap bias-correction factor
+#' # including bootstrap bias correction factor
+#' # cluster on Region
+#' ################################################
+#' # marginal effect replicates =
+#' me.boot <- matrix(data = clust.bs.inc$replicates[,2], nrow=10000, ncol=30, byrow=F) +
+#'            as.matrix(clust.bs.inc$replicates[,4]) %*% t(HS.grad.vec)
+#' # compute bias-corrected MEs
+#' me.income.bias.cor <- 2*me.income - apply(X=me.boot, FUN=mean, MARGIN=2)
+#' # adjust bootstrap replicates for bias
+#' me.boot.bias.cor <- me.boot + matrix(data = 2*(me.income - 
+#'                                      apply(X=me.boot, FUN=mean, MARGIN=2)),
+#'                                      ncol=30, nrow=10000, byrow=T)
+#' # compute pairs cluster bootstrap 95% CIs, including bias correction
+#' me.boot.plot <- apply(X = me.boot.bias.cor, FUN=quantile, MARGIN=2, probs=c(0.025, 0.975))
+#' # plot bootstrap bias-corrected marginal effects
+#' lines(me.income.bias.cor ~ HS.grad.vec, lwd=2)
+#' # plot 95% Cis
+#' # a little lowess smoothing applied to compensate for discontinuities 
+#' # arising from shifting between replicates
+#' lines(lowess(me.boot.plot[1,] ~ HS.grad.vec), lwd=2, lty=2)
+#' lines(lowess(me.boot.plot[2,] ~ HS.grad.vec), lwd=2, lty=2)
+#' 
+#' # finishing touches to plot
+#' legend(lty=c(1,2,1,2), lwd=c(1,1,2,2), "topleft", 
+#'        legend=c("Model Marginal Effect", "Conventional 95% CI", 
+#'                 "BS Bias-Corrected Marginal Effect", "Cluster Bootstrap 95% CI"))
+#' 
 #' }
 #' @rdname cluster.bs.glm
 #' @import stats
@@ -54,10 +116,12 @@
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
+#' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @export
 
-cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, cluster.se = TRUE, report = TRUE, prog.bar = TRUE){
+cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, 
+                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
   
   form <- mod$formula                                                 # what is the formula of this model?  
   variables <- all.vars(form)                                         # what variables are in this model?
@@ -96,7 +160,11 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
 
    }
   
-  w.store <- matrix(data=NA, nrow=boot.reps, ncol=length(ind.variables))    # store bootstrapped test statistics
+  w.store <- matrix(data=NA, nrow=boot.reps, ncol=length(ind.variables))  # store bootstrapped test statistics
+  
+  # keep track of the beta bootstrap replicates for possible output
+  rep.store <- matrix(data=NA, nrow=boot.reps, ncol=length(beta.mod))
+  colnames(rep.store) <- ind.variables
   
   if(prog.bar==TRUE){pb <- txtProgressBar(min = 0, max = boot.reps, initial = 0, style = 3)}
   for(i in 1:boot.reps){
@@ -149,6 +217,8 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
                      warning = function(w){return(NA)})                            # store the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                              # store the bootstrap test statistic
         
+        rep.store[i,] <- beta.boot                                                 # store the bootstrap beta for output
+        
       }else{
         
         se.boot <- tryCatch(summary(boot.mod)$coefficients[ind.variables,2],
@@ -158,11 +228,14 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
                      error = function(e){return(NA)}, 
                      warning = function(w){return(NA)})                             # retrieve the bootstrap beta coefficient
         w.store[i,] <- (beta.boot-beta.mod) / se.boot                               # calculate the t-test statistic
+        
+        rep.store[i,] <- beta.boot                                                  # store the bootstrap beta for output
                 
       }
     
     }else{
       w.store[i,] <- NA                                                  # if model didn't converge, store NA as a result 
+      rep.store[i,] <- NA
     }
   
   }
@@ -199,7 +272,7 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
   out.p <- cbind(ind.variables, out)
   out.p <- rbind(c("variable name", "cluster bootstrap p-value"), out.p)
   
-
+  
   printmat <- function(m){
     write.table(format(m, justify="right"), row.names=F, col.names=F, quote=F, sep = "   ")
   }
@@ -222,6 +295,7 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
   out.list<-list()
   out.list[["p.values"]]<-out
   out.list[["ci"]] <- out.ci
+  if(output.replicates == TRUE){out.list[["replicates"]] <- rep.store}
   return(invisible(out.list))
   
 }

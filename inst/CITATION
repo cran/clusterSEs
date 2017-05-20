@@ -1,0 +1,18 @@
+citHeader("To cite clusterSEs in publications use:")
+
+citEntry(entry = "Article",
+  title        = "Practical and Effective Approaches to Dealing with Clustered Data",
+  author       = personList(as.person("Justin Esarey"),
+                   as.person("Andrew Menger")),
+  journal      = "Political Science Research and Methods",
+  year         = "2017",
+  volume       = "forthcoming",
+  pages        = "1--35",
+  url          = "http://jee3.web.rice.edu/cluster-paper.pdf",
+
+  textVersion  =
+  paste("Justin Esarey and Andrew Menger (2017).",
+        "Practical and Effective Approaches to Dealing with Clustered Data.",
+        "Political Science Research and Methods, forthcoming, 1-35.",
+        "URL: http://jee3.web.rice.edu/cluster-paper.pdf.")
+)

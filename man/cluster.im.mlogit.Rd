@@ -5,7 +5,7 @@
 \title{Cluster-Adjusted Confidence Intervals And p-Values For mlogit}
 \usage{
 cluster.im.mlogit(mod, dat, cluster, ci.level = 0.95, report = TRUE,
-  truncate = FALSE)
+  truncate = FALSE, return.vcv = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -19,6 +19,8 @@ cluster.im.mlogit(mod, dat, cluster, ci.level = 0.95, report = TRUE,
 \item{report}{Should a table of results be printed to the console?}
 
 \item{truncate}{Should outlying cluster-specific beta estimates be excluded?}
+
+\item{return.vcv}{Should a VCV matrix and the means of cluster-specific coefficient estimates be returned?}
 }
 \value{
 A list with the elements
@@ -46,10 +48,11 @@ cluster.im.h <- cluster.im.mlogit(m, H.ml, ~ region)
 
 }
 }
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
+}
 \author{
 Justin Esarey
 }
-\references{
-Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
-}
-

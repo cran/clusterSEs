@@ -5,7 +5,8 @@
 \title{Wild Cluster Bootstrapped p-Values For Linear Family GLM}
 \usage{
 cluster.wild.glm(mod, dat, cluster, ci.level = 0.95, impose.null = TRUE,
-  boot.reps = 1000, report = TRUE, prog.bar = TRUE)
+  boot.reps = 1000, report = TRUE, prog.bar = TRUE,
+  output.replicates = FALSE)
 }
 \arguments{
 \item{mod}{A linear (identity link) model estimated using \code{glm}.}
@@ -23,6 +24,8 @@ cluster.wild.glm(mod, dat, cluster, ci.level = 0.95, impose.null = TRUE,
 \item{report}{Should a table of results be printed to the console?}
 
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
+
+\item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)? Only available when impose.null = FALSE.}
 }
 \value{
 A list with the elements
@@ -38,7 +41,10 @@ Code to estimate GLM clustered standard errors by Mahmood Arai: http://thetarzan
 \examples{
 \dontrun{
 
-# example: predict chicken weight
+#########################################
+# example one: predict chicken weight
+#########################################
+
 # predict chick weight using diet, do not impose the null hypothesis
 # because of factor variable "Diet"
 data(ChickWeight)
@@ -54,12 +60,61 @@ ChickWeight$Diet4 <- as.numeric(dum[,4])
 weight.mod2 <- glm(formula = weight~Diet2+Diet3+Diet4,data=ChickWeight)
 cluster.wd.w.2 <-cluster.wild.glm(weight.mod2, dat = ChickWeight,cluster = ~Chick, boot.reps = 1000)
 
+############################################################################
+# example two: linear model of whether respondent has a university degree
+#              with interaction between gender and age + country FEs
+############################################################################
+
+require(effects)
+data(WVS)
+
+WVS$degree.n <- as.numeric(WVS$degree)
+WVS$gender.n <- as.numeric(WVS$gender)
+WVS$genderXage <- WVS$gender.n * WVS$age
+lin.model <- glm(degree.n ~ gender.n + age + genderXage + religion, data=WVS)
+
+# compute marginal effect of male gender on probability of obtaining a university degree
+# using conventional standard errors
+age.vec <- seq(from=18, to=90, by=1)
+me.age <- coefficients(lin.model)[2] + coefficients(lin.model)[4]*age.vec
+plot(me.age ~ age.vec, type="l", ylim=c(-0.1, 0.1), xlab="age", 
+     ylab="ME of male gender on Pr(university degree)")
+se.age <- sqrt( vcov(lin.model)[2,2] + vcov(lin.model)[4,4]*(age.vec)^2 +
+                2*vcov(lin.model)[2,4]*age.vec)
+ci.h <- me.age + qt(0.975, lower.tail=T, df=lin.model$df.residual) * se.age
+ci.l <- me.age - qt(0.975, lower.tail=T, df=lin.model$df.residual) * se.age
+lines(ci.h ~ age.vec, lty=2)
+lines(ci.l ~ age.vec, lty=2)
+
+
+# cluster on country, compute CIs for marginal effect of gender on degree attainment
+clust.wild.result <- cluster.wild.glm(lin.model, WVS, ~ country, 
+                                      impose.null = F, report = T, 
+                                      output.replicates=T)
+replicates <- clust.wild.result$replicates
+me.boot <- matrix(data=NA, nrow=dim(replicates)[1], ncol=length(age.vec))
+for(i in 1:dim(replicates)[1]){
+  me.boot[i,] <- replicates[i,"gender.n"] + replicates[i,"genderXage"]*age.vec
 }
+ci.wild <- apply(FUN=quantile, X=me.boot, MARGIN=2, probs=c(0.025, 0.975))
+
+# a little lowess smoothing applied to compensate for discontinuities 
+# arising from shifting between replicates
+lines(lowess(ci.wild[1,] ~ age.vec), lty=3)
+lines(lowess(ci.wild[2,] ~ age.vec), lty=3)
+
+# finishing touches to plot
+legend(lty=c(1,2,3), "topleft",
+       legend=c("Model Marginal Effect", "Conventional 95\% CI",
+                "Wild BS 95\% CI"))
+                
+}
+}
+\references{
+Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
+
+Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 }
 \author{
 Justin Esarey
 }
-\references{
-Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
-}
-
