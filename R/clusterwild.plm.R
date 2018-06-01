@@ -80,11 +80,15 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
     stop("invalid clustering variable; see help file")
   }
   
+  "%w/o%" <- function(x, y) x[!x %in% y]                         # a little function to create a without function (see ?match)
   form <- mod$formula                                            # what is the formula of this model?  
   variables <- all.vars(form)                                    # what variables are in this model?
-  ind.variables <- names(coefficients(mod))                      # what independent variables are in this model?
   ind.variables.data <- all.vars(update(form, 1 ~ .))            # gives the names of IVs in the data set (before function transforms)
-  
+  ind.variables <- rownames(summary(mod)$coefficients)           # what independent variables are in this model?
+  count.v <- dim(mod$model)[2]
+  ind.variables.full <- colnames(mod$model)[2:count.v]           # what independent variables (incld drops, but not intercept) are in this model?
+  ind.variables.name <- ind.variables %w/o% "(Intercept)"        # what independent variables (excld intercept) are in this model?
+    
   se.clust <- sqrt(diag(vcovHC(mod, cluster=cluster)))           # retrieve the clustered SEs
   beta.mod <- coefficients(mod)[ind.variables]                   # retrieve the estimated coefficients
   w <- beta.mod / se.clust                                       # calculate the t-test statistic  
@@ -93,13 +97,6 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   # so that residuals can be added w/o incident
   dat$dv.new[used.idx] <- mod$model[,1]                     # add transformed DV into data set
   form.new <- update(form, dv.new ~ .)                      # formula subbing in transformed DV
-  
-  # check to see whether any IVs are factors (not needed)
-  # fac <- c()
-  # for(i in 1:length(ind.variables.data)){
-  #   fac[i] <- is.factor(dat[,ind.variables.data[i]])
-  # }
-  # fac <- max(fac)
   
   if(prog.bar==TRUE){cat("Wild Cluster bootstrapping w/o imposing null...", "\n")}
 
@@ -183,6 +180,13 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
     if(is.null(print.ci) == FALSE){
       cat("\n", "Confidence Intervals (derived from bootstrapped t-statistics): ", "\n", "\n")
       printmat(print.ci)
+    }
+    
+    if(length(ind.variables.name) < length(ind.variables.full)){
+      cat("\n", "\n", "****", "Note: ", length(ind.variables.full) - length(ind.variables.name), " variables were unidentified in the model and are not reported.", "****", "\n", sep="")
+      cat("Variables not reported:", "\n", sep="")
+      cat(ind.variables.full[!ind.variables.full %in% ind.variables.name], sep=", ")
+      cat("\n", "\n")
     }
 
    }

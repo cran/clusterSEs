@@ -130,7 +130,8 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
   dat <- dat[used.idx,]                                               # keep only active observations (drop the missing)
   clust <- as.vector(unlist(dat[[clust.name]]))                       # store cluster index in convenient vector
   G<-length(unique(clust))                                            # how many clusters are in this model?
-  ind.variables <- names(coefficients(mod))                           # what independent variables are in this model?
+  ind.variables.full <- names(coefficients(mod))                      # what independent variables are in this model?
+  ind.variables <- rownames(summary(mod)$coefficients)                # what non-dropped independent variables in this model?
   
   
   # load in a function to create clustered standard errors
@@ -280,7 +281,7 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
   if(report==T){
     
     if(num.fail!=0){
-    cat("\n", "\n", "\n", "****", "Warning: ", num.fail, " out of ", boot.reps, "bootstrap replicate models failed to estimate.", "****", "\n")
+    cat("\n", "\n", "\n", "****", "Warning: ", num.fail, " out of ", boot.reps, " bootstrap replicate models failed to estimate.", "****", "\n", sep="")
     }
     
     cat("\n", "Cluster Bootstrap p-values: ", "\n", "\n")
@@ -288,7 +289,13 @@ cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, s
 
     cat("\n", "Confidence Intervals (derived from bootstrapped t-statistics): ", "\n", "\n")
     printmat(print.ci)
-    
+
+    if(length(ind.variables) < length(ind.variables.full)){
+    cat("\n", "\n", "****", "Note: ", length(ind.variables.full) - length(ind.variables), " variables were unidentified in the model and are not reported.", "****", "\n", sep="")
+    cat("Variables not reported:", "\n", sep="")
+    cat(ind.variables.full[!ind.variables.full %in% ind.variables], sep=", ")
+    cat("\n", "\n")
+    }
     
   }
   

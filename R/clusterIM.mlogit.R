@@ -76,6 +76,11 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
     
 
     if(fail==F){                                                              # if model ran...
+      
+      # detect whether variables were dropped in individual clusters
+      if(length(names(coefficients(clust.mod))) != length(ind.variables)){
+        stop("cluster-specific model(s) dropped variables; ensure that all variables vary within clusters", call.=FALSE)
+      }
 
       b.clust[i,] <- coefficients(clust.mod)                                  # store the cluster i beta coefficient
 

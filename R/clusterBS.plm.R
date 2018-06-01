@@ -80,9 +80,13 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
     stop("invalid clustering variable; see help file")
   }
   
+  "%w/o%" <- function(x, y) x[!x %in% y]                              # a little function to create a without function (see ?match)
   form <- mod$formula                                                 # what is the formula of this model?  
   variables <- all.vars(form)                                         # what variables are in this model?
-  ind.variables <- names(coefficients(mod))                           # what independent variables are in this model?
+  ind.variables <- rownames(summary(mod)$coefficients)                # what independent variables are in this model?
+  count.v <- dim(mod$model)[2]
+  ind.variables.full <- colnames(mod$model)[2:count.v]                # what independent variables (incld drops, but not intercept) are in this model?
+  ind.variables.name <- ind.variables %w/o% "(Intercept)"             # what independent variables (excld intercept) are in this model?
   
    if(cluster.se == T){
      
@@ -233,6 +237,12 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
     cat("\n", "Confidence Intervals (derived from bootstrapped t-statistics): ", "\n", "\n")
     printmat(print.ci)
     
+    if(length(ind.variables.name) < length(ind.variables.full)){
+      cat("\n", "\n", "****", "Note: ", length(ind.variables.full) - length(ind.variables.name), " variables were unidentified in the model and are not reported.", "****", "\n", sep="")
+      cat("Variables not reported:", "\n", sep="")
+      cat(ind.variables.full[!ind.variables.full %in% ind.variables.name], sep=", ")
+      cat("\n", "\n")
+    }
     
   }
   

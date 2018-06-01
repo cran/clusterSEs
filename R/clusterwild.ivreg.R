@@ -78,10 +78,11 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
   clust <- as.vector(unlist(dat[[clust.name]]))                  # store cluster index in convenient vector
   G<-length(unique(clust))                                       # how many clusters are in this model?
   "%w/o%" <- function(x, y) x[!x %in% y]                         # a little function to create a without function (see ?match)
-  ind.variables <- names(mod$coefficients) %w/o% "(Intercept)"   # what independent variables are in this data set?
   dv <- variables %w/o% all.vars(update(form, 1 ~ .))            # what is the dependent variable?
   ind.variables.data <- all.vars(update(form, 1 ~ .))            # gives the names of IVs in the data set (before function transforms)
-  ind.variables.names <- names(coefficients(mod))                # printed names of all fitted coefficients (incld. intercept)
+  ind.variables.names <- rownames(summary(mod)$coefficients)     # printed names of all fitted coefficients (incld. intercept), neglecting drops
+  ind.variables <- ind.variables.names %w/o% "(Intercept)"       # what independent variables are in this data set, neglecting drops and intercept?
+  ind.variables.names.full <- names(coefficients(mod))           # printed names of coefs (w/ intercept and dropped variables)
   
   # in case dv is wrapped in a function, need to set it to its functional value
   # so that residuals can be added w/o incident
@@ -90,11 +91,7 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
   
 
   # check to see whether any IVs are factors
-  fac <- c()
-  for(i in 1:length(ind.variables.data)){
-    fac[i] <- is.factor(dat[,ind.variables.data[i]])
-  }
-  fac <- max(fac)
+  fac <- max(0,min(length(mod$levels),1))
   
   # do not impose the null for factor variables
   if(fac == 1 & impose.null == TRUE){
@@ -129,14 +126,21 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
     w.store <- matrix(data=NA, nrow=boot.reps, ncol=length(ind.variables))    # store bootstrapped test statistics
     
     if(names(mod$coefficients)[1] == "(Intercept)"){offset <- 1}else{offset <- 0}
-    
+
+    # no factors, so remove any variables that were dropped from original model
+    # (code from http://www.cookbook-r.com/Formulas/Creating_a_formula_from_a_string/)
+    dropped.vars <- ind.variables.names.full %w/o% ind.variables.names
+    if(length(dropped.vars)>0){ 
+    	form.new <- update(form.new, as.formula(paste("~ . -", dropped.vars, "| . -", dropped.vars)))
+    }
+
     if(prog.bar==TRUE){cat("\n")}
     for(j in 1:length(ind.variables)){
       
       if(prog.bar==TRUE){cat("Independent variable being bootstrapped: ", ind.variables[j], "\n")}
       
       # run model imposing the null hypothesis
-      mod.form <- as.Formula(mod$form)
+      mod.form <- form.new
       form.null <- update(mod.form, as.formula(paste("~ . -", ind.variables[j], "| . -", ind.variables[j] ) ))
       mod.call <- mod$call
       mod.call[[2]] <- form.null              # change formula to impose the null hypothesis
@@ -254,7 +258,7 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
                           error = function(e){return(NA)})) 
       
       se.boot <- cl(boot.dat, boot.mod, clust)[,2]                           # retrieve the bootstrap clustered SE
-      beta.boot <- coefficients(boot.mod)                                    # store the bootstrap beta coefficient
+      beta.boot <- coefficients(boot.mod)[ind.variables.names]               # store the bootstrap beta coefficient
       w.store[i,] <- (beta.boot-beta.mod) / se.boot                          # store the bootstrap test statistic
       
       rep.store[i,] <- beta.boot                                       # store the bootstrap beta for output
@@ -300,6 +304,13 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
     if(is.null(print.ci) == FALSE){
       cat("\n", "Confidence Intervals (derived from bootstrapped t-statistics): ", "\n", "\n")
       printmat(print.ci)
+    }
+    
+    if(length(ind.variables.names) < length(ind.variables.names.full)){
+      cat("\n", "\n", "****", "Note: ", length(ind.variables.names.full) - length(ind.variables.names), " variables were unidentified in the model and are not reported.", "****", "\n", sep="")
+      cat("Variables not reported:", "\n", sep="")
+      cat(ind.variables.names.full[!ind.variables.names.full %in% ind.variables.names], sep=", ")
+      cat("\n", "\n")
     }
 
    }

@@ -46,7 +46,8 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
   dat <- dat[used.idx,]                                                  # keep only active observations (drop the missing)
   clust <- as.vector(unlist(dat[[clust.name]]))                          # store cluster index in convenient vector
   G<-length(unique(clust))                                               # how many clusters are in this model?
-  ind.variables <- names(coefficients(mod))                              # what independent variables are in this model?
+  ind.variables <- rownames(summary(mod)$coefficients)                   # what independent variables are in this model?
+  ind.variables.full <- names(coefficients(mod))                         # what independent variables (incld drops) are in this model?
   
   
   b.clust <- matrix(data = NA, nrow = G, ncol = length(ind.variables))     # a matrix to store the betas
@@ -66,15 +67,27 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
     
     fail <- is.null(clust.mod)                                           # determine whether the ivreg model was correctly fitted
     
-    
+
     # should we stop if one cluster-specific model does not converge?
     if(drop==FALSE){
       if(fail==T){stop("cluster-specific model returned error (try drop = TRUE)", call.=FALSE)}
-      b.clust[i,] <- coefficients(clust.mod)                                                 # store the cluster i beta coefficient
+      
+      # detect whether variables were dropped in individual clusters
+      if(length(rownames(summary(clust.mod)$coefficients)) != length(ind.variables)){
+        stop("cluster-specific model(s) dropped variables; ensure that all variables vary within clusters", call.=FALSE)
+      }
+      
+      b.clust[i,] <- summary(clust.mod)$coefficients[,1]                                                 # store the cluster i beta coefficient
       
     }else{
       if(fail==F){
-        b.clust[i,] <- coefficients(clust.mod)                                               # store the cluster i beta coefficient
+        
+        # detect whether variables were dropped in individual clusters
+        if(length(rownames(summary(clust.mod)$coefficients)) != length(ind.variables)){
+          stop("cluster-specific model(s) dropped variables; ensure that all variables vary within clusters", call.=FALSE)
+        }
+        
+        b.clust[i,] <- summary(clust.mod)$coefficients[,1]                                               # store the cluster i beta coefficient
       }else{
         b.clust[i,] <- NA
       }
@@ -136,6 +149,13 @@ cluster.im.ivreg<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, dr
         
     if(G.o > G){
       cat("\n", "Note:", G.o - G, "clusters were dropped (see help file).", "\n", "\n")
+    }
+    
+    if(length(ind.variables) < length(ind.variables.full)){
+      cat("\n", "\n", "****", "Note: ", length(ind.variables.full) - length(ind.variables), " variables were unidentified in the model and are not reported.", "****", "\n", sep="")
+      cat("Variables not reported:", "\n", sep="")
+      cat(ind.variables.full[!ind.variables.full %in% ind.variables], sep=", ")
+      cat("\n", "\n")
     }
     
   }
