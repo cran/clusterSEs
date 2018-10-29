@@ -29,7 +29,7 @@
 #' data("Train", package="mlogit")
 #' Train$ch.id <- paste(Train$id, Train$choiceid, sep=".")
 #' Tr <- mlogit.data(Train, shape = "wide", choice = "choice", varying = 4:11,
-#'                   sep = "", alt.levels = c(1, 2), id = "id")
+#'                   sep = "_", alt.levels = c(1, 2), id = "id")
 #' Tr$price <- Tr$price/100 * 2.20371
 #' Tr$time <- Tr$time/60
 #' ml.Train <- mlogit(choice ~ price + time + change + comfort | -1, Tr)

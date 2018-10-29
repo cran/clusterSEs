@@ -5,8 +5,8 @@
 \title{Pairs Cluster Bootstrapped p-Values For mlogit}
 \usage{
 cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  cluster.se = TRUE, report = TRUE, prog.bar = TRUE, unique.id = TRUE,
-  output.replicates = FALSE)
+  cluster.se = TRUE, report = TRUE, prog.bar = TRUE,
+  unique.id = TRUE, output.replicates = FALSE)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -51,7 +51,7 @@ require(mlogit)
 data("Train", package="mlogit")
 Train$ch.id <- paste(Train$id, Train$choiceid, sep=".")
 Tr <- mlogit.data(Train, shape = "wide", choice = "choice", varying = 4:11,
-                  sep = "", alt.levels = c(1, 2), id = "id")
+                  sep = "_", alt.levels = c(1, 2), id = "id")
 Tr$price <- Tr$price/100 * 2.20371
 Tr$time <- Tr$time/60
 ml.Train <- mlogit(choice ~ price + time + change + comfort | -1, Tr)
