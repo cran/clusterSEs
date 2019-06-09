@@ -11,6 +11,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)? Only available when impose.null = FALSE.
+#' @param seed Random number seed for replicability (default is NULL).
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -23,6 +24,7 @@
 #' #############################################
 #' # example one: predict cigarette consumption
 #' #############################################
+#' require(AER)
 #' data("CigarettesSW", package = "AER") 
 #' CigarettesSW$rprice <- with(CigarettesSW, price/cpi)
 #' CigarettesSW$rincome <- with(CigarettesSW, income/population/cpi)
@@ -64,13 +66,23 @@
 #
 
 cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = TRUE, boot.reps = 1000,
-                             report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
+                             report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
+                             seed=NULL){
+  
+  if(is.null(seed)==F){                                               # if user supplies a seed, set it
+    
+    tryCatch(set.seed(seed),
+             error = function(e){return("seed must be a valid integer")}, 
+             warning = function(w){return(NA)}) 
+    
+  }
   
   if(output.replicates == TRUE & impose.null == TRUE){
     stop("Recovering bootstrap replicates requires setting impose.null = FALSE")
   }
   
   form <- mod$formula                                            # what is the formula of this model?
+  
   variables <- all.vars(form)                                    # what variables are in this model?
   clust.name <- all.vars(cluster)                                # what is the name of the clustering variable?
   used.idx <- which(rownames(dat) %in% rownames(mod$model))      # what were the actively used observations in the model?
@@ -79,7 +91,7 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
   G<-length(unique(clust))                                       # how many clusters are in this model?
   "%w/o%" <- function(x, y) x[!x %in% y]                         # a little function to create a without function (see ?match)
   dv <- variables %w/o% all.vars(update(form, 1 ~ .))            # what is the dependent variable?
-  ind.variables.data <- all.vars(update(form, 1 ~ .))            # gives the names of IVs in the data set (before function transforms)
+  ind.variables.data <-  all.vars(update(form, 1 ~ .))           # gives the names of IVs in the data set (before function transforms)
   ind.variables.names <- rownames(summary(mod)$coefficients)     # printed names of all fitted coefficients (incld. intercept), neglecting drops
   ind.variables <- ind.variables.names %w/o% "(Intercept)"       # what independent variables are in this data set, neglecting drops and intercept?
   ind.variables.names.full <- names(coefficients(mod))           # printed names of coefs (w/ intercept and dropped variables)
@@ -87,8 +99,7 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
   # in case dv is wrapped in a function, need to set it to its functional value
   # so that residuals can be added w/o incident
   dat$dv.new <- mod$y                                            # add transformed DV into data set
-  form.new <- update(as.Formula(form), dv.new ~ .)               # formula subbing in transformed DV
-  
+  form.new <- update(as.Formula(form), dv.new ~ .)               # substitute in new dV
 
   # check to see whether any IVs are factors
   fac <- max(0,min(length(mod$levels),1))
@@ -96,6 +107,24 @@ cluster.wild.ivreg<-function(mod, dat, cluster, ci.level = 0.95, impose.null = T
   # do not impose the null for factor variables
   if(fac == 1 & impose.null == TRUE){
     cat("\n","\n", "Note: null not imposed (factor variables are present).", "\n")
+    impose.null<-FALSE
+  }
+  
+  # check whether there are (automatic) interaction terms
+  interaction <- max(attr(mod$terms$regressors,"order"))
+  
+  # do not impose the null for interaction terms
+  if( interaction > 1 & impose.null == TRUE){
+    cat("\n","\n", "Note: null not imposed (interactions are present).", "\n", "\n")
+    impose.null<-FALSE
+  }
+  
+  # check for polynomial terms
+  poly.check <- max(unlist(lapply(mod$model, FUN=class))=="poly")
+  
+  # do not impose the null for polynomial terms
+  if( poly.check == 1 & impose.null == TRUE){
+    cat("\n","\n", "Note: null not imposed (polynomial terms are present).", "\n", "\n")
     impose.null<-FALSE
   }
     

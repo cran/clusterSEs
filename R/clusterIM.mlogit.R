@@ -137,13 +137,13 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
   ci.hi <- b.hat + qt((1-ci.level)/2, df=(G-1), lower.tail=FALSE)*(s.hat/sqrt(G))
     
   out <- matrix(p.out, ncol=1)
-  out.p <- cbind( names(coefficients(summary(mod))), round(out,3) )
+  out.p <- cbind( rownames(coefficients(summary(mod))), round(out,3) )
   
   out.ci <- cbind(ci.lo, ci.hi)
   rownames(out.ci) <- names(coefficients(summary(mod)))
   colnames(out.ci) <- c("CI lower", "CI higher")
   
-  print.ci <- cbind(names(coefficients(summary(mod))), ci.lo, ci.hi)
+  print.ci <- cbind(rownames(coefficients(summary(mod))), ci.lo, ci.hi)
   print.ci <- rbind(c("variable name", "CI lower", "CI higher"), print.ci)
   
 

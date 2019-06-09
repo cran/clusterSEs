@@ -11,6 +11,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)? Only available when impose.null = FALSE.
+#' @param seed Random number seed for replicability (default is NULL).
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -103,7 +104,16 @@
 #
 
 cluster.wild.glm<-function(mod, dat, cluster, ci.level = 0.95, impose.null = TRUE, boot.reps = 1000, 
-                           report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
+                           report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
+                           seed=NULL){
+  
+  if(is.null(seed)==F){                                               # if user supplies a seed, set it
+    
+    tryCatch(set.seed(seed),
+             error = function(e){return("seed must be a valid integer")}, 
+             warning = function(w){return(NA)}) 
+    
+  }
   
   if(mod$family[1] != "gaussian" | mod$family[2] != "identity"){
     stop("Use only with gaussian family models with a linear link")
@@ -122,7 +132,7 @@ cluster.wild.glm<-function(mod, dat, cluster, ci.level = 0.95, impose.null = TRU
   # ind.variables <- attr(mod$terms, "term.labels")              # what independent variables are in this model? (deprecated)
   "%w/o%" <- function(x, y) x[!x %in% y]                         # create a without function (see ?match)
   dv <- variables %w/o% all.vars(update(form, 1 ~ .))            # what is the dependent variable?
-  ind.variables.data <- all.vars(update(form, 1 ~ .))            # IVs in the data set (before function transforms)
+  ind.variables.data <- all.vars(update(form, 1 ~ .))            # RHS variables in this model (before variable transforms)
   ind.variables.names.full <- names(coefficients(mod))           # printed names of coefs (w/ intercept)
   ind.variables.names <- rownames(summary(mod)$coefficients)     # printed names of coefs (w/ intercept), neglecting drops
   ind.variables <- ind.variables.names %w/o% "(Intercept)"       # what independent variables are in this model, neglecting drops and intercept?
@@ -130,18 +140,35 @@ cluster.wild.glm<-function(mod, dat, cluster, ci.level = 0.95, impose.null = TRU
   # in case dv is wrapped in a function, need to set it to its functional value
   # so that residuals can be added w/o incident
   dat$dv.new <- mod$y                                            # add transformed DV into data set
-  form.new <- update(form, dv.new ~ .)                           # formula subbing in transformed DV
-  
+  form.new <- update(form, dv.new ~ .)                           # substitute in new dV
 
   # check to see whether any IVs are factors
   fac <- max(0,min(length(mod$xlevels),1))
   
   # do not impose the null for factor variables
-  if(fac == 1 & impose.null == TRUE){
-    cat("\n","\n", "Note: null not imposed (factor variables are present).", "\n")
+  if( fac == 1 & impose.null == TRUE){
+    cat("\n","\n", "Note: null not imposed (factor variables are present).", "\n", "\n")
     impose.null<-FALSE
   }
-    
+  
+  # check whether there are (automatic) interaction terms
+  interaction <- max(attr(mod$terms,"order"))
+  
+  # do not impose the null for interaction terms
+  if( interaction > 1 & impose.null == TRUE){
+    cat("\n","\n", "Note: null not imposed (interactions are present).", "\n", "\n")
+    impose.null<-FALSE
+  }
+  
+  # check for polynomial terms
+  poly.check <- max(unlist(lapply(mod$model, FUN=class))=="poly")
+   
+  # do not impose the null for polynomial terms
+  if( poly.check == 1 & impose.null == TRUE){
+    cat("\n","\n", "Note: null not imposed (polynomial terms are present).", "\n", "\n")
+    impose.null<-FALSE
+  }
+  
   # load in a function to create clustered standard errors
   # by Mahmood Arai: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/
   cl   <- function(dat, fm, cluster){

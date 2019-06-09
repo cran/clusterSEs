@@ -12,6 +12,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
+#' @param seed Random number seed for replicability (default is NULL).
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -121,7 +122,16 @@
 #' @export
 
 cluster.bs.glm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, stratify = FALSE, 
-                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
+                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
+                         seed = NULL){
+  
+  if(is.null(seed)==F){                                               # if user supplies a seed, set it
+    
+    tryCatch(set.seed(seed),
+             error = function(e){return("seed must be a valid integer")}, 
+             warning = function(w){return(NA)}) 
+    
+  }
   
   form <- mod$formula                                                 # what is the formula of this model?  
   variables <- all.vars(form)                                         # what variables are in this model?

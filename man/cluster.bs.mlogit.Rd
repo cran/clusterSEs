@@ -6,7 +6,7 @@
 \usage{
 cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   cluster.se = TRUE, report = TRUE, prog.bar = TRUE,
-  unique.id = TRUE, output.replicates = FALSE)
+  unique.id = TRUE, output.replicates = FALSE, seed = NULL)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -28,6 +28,8 @@ cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{unique.id}{Should id (from \code{mlogit.data}) be made unique for bootstrap replicates (= TRUE) or repeated across replicates (= FALSE)?}
 
 \item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
+
+\item{seed}{Random number seed for replicability (default is NULL).}
 }
 \value{
 A list with the elements

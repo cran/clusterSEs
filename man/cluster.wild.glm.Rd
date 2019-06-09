@@ -6,7 +6,7 @@
 \usage{
 cluster.wild.glm(mod, dat, cluster, ci.level = 0.95,
   impose.null = TRUE, boot.reps = 1000, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE)
+  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
 }
 \arguments{
 \item{mod}{A linear (identity link) model estimated using \code{glm}.}
@@ -26,6 +26,8 @@ cluster.wild.glm(mod, dat, cluster, ci.level = 0.95,
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
 
 \item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)? Only available when impose.null = FALSE.}
+
+\item{seed}{Random number seed for replicability (default is NULL).}
 }
 \value{
 A list with the elements

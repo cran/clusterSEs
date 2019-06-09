@@ -6,7 +6,7 @@
 \usage{
 cluster.bs.ivreg(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   stratify = FALSE, cluster.se = TRUE, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE)
+  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
 }
 \arguments{
 \item{mod}{A model estimated using \code{ivreg}.}
@@ -28,6 +28,8 @@ cluster.bs.ivreg(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
 
 \item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
+
+\item{seed}{Random number seed for replicability (default is NULL).}
 }
 \value{
 A list with the elements
@@ -47,6 +49,7 @@ Code to estimate clustered standard errors by Mahmood Arai: http://thetarzan.wor
 ##############################################
 # example one: predict cigarette consumption
 ##############################################
+require(AER)
 data("CigarettesSW", package = "AER") 
 CigarettesSW$rprice <- with(CigarettesSW, price/cpi)
 CigarettesSW$rincome <- with(CigarettesSW, income/population/cpi)

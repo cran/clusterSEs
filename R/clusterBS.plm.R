@@ -11,6 +11,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
+#' @param seed Random number seed for replicability (default is NULL).
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -51,7 +52,16 @@
 #' @export
 
 cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps = 1000,
-                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
+                         cluster.se = TRUE, report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
+                         seed = NULL){
+  
+  if(is.null(seed)==F){                                               # if user supplies a seed, set it
+    
+    tryCatch(set.seed(seed),
+             error = function(e){return("seed must be a valid integer")}, 
+             warning = function(w){return(NA)}) 
+    
+  }
   
   if( min( class(dat) != "pdata.frame" ) ){                           # if data not pdata.frame
     dat <- pdata.frame(dat, index=colnames(dat)[1:2], row.names=F)    # convert it
@@ -62,7 +72,7 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
     clust <- attr(mod$mod, "index")[,1]                               # which clusters were used?                               
     clust.name <- colnames(attr(mod$mod, "index"))[1]                 # what is the name of the cluster?
     clust.full <- attr(dat, "index")[,1]                              # all clusters in the dataset
-    used.idx <- which(rownames(dat) %in% rownames(mod$model))        # what were the actively used observations in the model?
+    used.idx <- which(rownames(dat) %in% rownames(mod$model))         # what were the actively used observations in the model?
     G<-length(unique(clust))                                          # how many clusters are in this model?
     
   }
@@ -72,7 +82,7 @@ cluster.bs.plm<-function(mod, dat, cluster="group", ci.level = 0.95, boot.reps =
     clust <- attr(mod$mod, "index")[,2]                               # which clusters were used?                               
     clust.name <- colnames(attr(mod$mod, "index"))[2]                 # what is the name of the cluster?
     clust.full <- attr(dat, "index")[,2]                              # all clusters in the dataset
-    used.idx <- which(rownames(dat) %in% rownames(mod$model))        # what were the actively used observations in the model?
+    used.idx <- which(rownames(dat) %in% rownames(mod$model))         # what were the actively used observations in the model?
     G<-length(unique(clust))                                          # how many clusters are in this model?
     
   }

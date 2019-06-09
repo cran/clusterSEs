@@ -10,6 +10,7 @@
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
+#' @param seed Random number seed for replicability (default is NULL).
 #'
 #' @return A list with the elements
 #' \item{p.values}{A matrix of the estimated p-values.}
@@ -33,8 +34,8 @@
 #' 
 #' }
 #' @rdname cluster.wild.plm
-#' @import Formula
 #' @import plm
+#' @import Formula
 #' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @import stats
@@ -45,7 +46,16 @@
 #' 
 
 cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, 
-                           report = TRUE, prog.bar = TRUE, output.replicates = FALSE){
+                           report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
+                           seed=NULL){
+  
+  if(is.null(seed)==F){                                               # if user supplies a seed, set it
+    
+    tryCatch(set.seed(seed),
+             error = function(e){return("seed must be a valid integer")}, 
+             warning = function(w){return(NA)}) 
+    
+  }
   
   if( min( class(dat) != "pdata.frame" ) ){                             # if data not pdata.frame
 
@@ -83,7 +93,7 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   "%w/o%" <- function(x, y) x[!x %in% y]                         # a little function to create a without function (see ?match)
   form <- mod$formula                                            # what is the formula of this model?  
   variables <- all.vars(form)                                    # what variables are in this model?
-  ind.variables.data <- all.vars(update(form, 1 ~ .))            # gives the names of IVs in the data set (before function transforms)
+  ind.variables.data <- all.vars(update(form, 1 ~ .))            # RHS variables in this model
   ind.variables <- rownames(summary(mod)$coefficients)           # what independent variables are in this model?
   count.v <- dim(mod$model)[2]
   ind.variables.full <- colnames(mod$model)[2:count.v]           # what independent variables (incld drops, but not intercept) are in this model?
@@ -96,8 +106,8 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
   # in case dv is wrapped in a function, need to set it to its functional value
   # so that residuals can be added w/o incident
   dat$dv.new[used.idx] <- mod$model[,1]                     # add transformed DV into data set
-  form.new <- update(form, dv.new ~ .)                      # formula subbing in transformed DV
-  
+  form.new <- update(form, dv.new ~ .)                      # substitute in new dV
+
   if(prog.bar==TRUE){cat("Wild Cluster bootstrapping w/o imposing null...", "\n")}
 
   boot.dat <- dat                                              # copy the data set into a bootstrap resampling dataset

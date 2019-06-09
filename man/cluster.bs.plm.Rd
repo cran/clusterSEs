@@ -6,7 +6,7 @@
 \usage{
 cluster.bs.plm(mod, dat, cluster = "group", ci.level = 0.95,
   boot.reps = 1000, cluster.se = TRUE, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE)
+  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
 }
 \arguments{
 \item{mod}{A "within" model estimated using \code{plm}.}
@@ -26,6 +26,8 @@ cluster.bs.plm(mod, dat, cluster = "group", ci.level = 0.95,
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
 
 \item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
+
+\item{seed}{Random number seed for replicability (default is NULL).}
 }
 \value{
 A list with the elements
