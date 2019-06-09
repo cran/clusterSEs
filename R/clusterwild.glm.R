@@ -1,6 +1,6 @@
 #' Wild Cluster Bootstrapped p-Values For Linear Family GLM
 #'
-#' This software estimates p-values using wild cluster bootstrapped t-statistics for linear family GLM models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic. Users may choose whether to impose the null hypothesis for independent variables; the null is never imposed for the intercept or any model that includes factor variables. Confidence intervals are only reported when the null hypothesis is \emph{not} imposed.
+#' This software estimates p-values using wild cluster bootstrapped t-statistics for linear family GLM models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic. Users may choose whether to impose the null hypothesis for independent variables; the null is never imposed for the intercept or any model that includes factor variables, interactions, or polynomials (although manually specified versions of these can circumvent the restriction). Confidence intervals are only reported when the null hypothesis is \emph{not} imposed.
 #'
 #' @param mod A linear (identity link) model estimated using \code{glm}.
 #' @param dat The data set used to estimate \code{mod}.

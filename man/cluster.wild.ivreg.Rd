@@ -35,7 +35,7 @@ A list with the elements
 \item{ci}{A matrix of confidence intervals (if null not imposed).}
 }
 \description{
-This software estimates p-values using wild cluster bootstrapped t-statistics for instrumental variables regression models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic. Users may choose whether to impose the null hypothesis for independent variables; the null is never imposed for the intercept or any model that includes factor variables. Confidence intervals are only reported when the null hypothesis is \emph{not} imposed.
+This software estimates p-values using wild cluster bootstrapped t-statistics for instrumental variables regression models (Cameron, Gelbach, and Miller 2008). Residuals are repeatedly re-sampled by cluster to form a pseudo-dependent variable, a model is estimated for each re-sampled data set, and inference is based on the sampling distribution of the pivotal (t) statistic. Users may choose whether to impose the null hypothesis for independent variables; the null is never imposed for the intercept or any model that includes factor variables, interactions, or polynomials (although manually specified versions of these can circumvent the restriction). Confidence intervals are only reported when the null hypothesis is \emph{not} imposed.
 }
 \note{
 Code to estimate clustered standard errors by Mahmood Arai: http://thetarzan.wordpress.com/2011/06/11/clustered-standard-errors-in-r/. Cluster SE degrees of freedom correction = (M/(M-1)) with M = the number of clusters.
