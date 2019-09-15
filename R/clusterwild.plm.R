@@ -4,7 +4,7 @@
 #'
 #' @param mod A "within" model estimated using \code{plm}.
 #' @param dat The data set used to estimate \code{mod}.
-#' @param cluster A formula of the clustering variable.
+#' @param cluster Clustering dimension ("group", the default, or "time").
 #' @param ci.level What confidence level should CIs reflect? (Note: only reported when \code{impose.null == FALSE}).
 #' @param boot.reps The number of bootstrap samples to draw.
 #' @param report Should a table of results be printed to the console?

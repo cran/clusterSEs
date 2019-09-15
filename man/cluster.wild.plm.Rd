@@ -13,7 +13,7 @@ cluster.wild.plm(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 
 \item{dat}{The data set used to estimate \code{mod}.}
 
-\item{cluster}{A formula of the clustering variable.}
+\item{cluster}{Clustering dimension ("group", the default, or "time").}
 
 \item{ci.level}{What confidence level should CIs reflect? (Note: only reported when \code{impose.null == FALSE}).}
 

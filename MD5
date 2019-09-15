@@ -1,4 +1,4 @@
-596ecee87a8ec4e09a3505830183e0d4 *DESCRIPTION
+932b126cc28c96a8c7f2729a9dd2ab49 *DESCRIPTION
 5184fd6fadb595395d2c0ded074112c3 *NAMESPACE
 be803e41ee39e88ea32281b75b758f62 *R/clusterBS.glm.R
 a6bd76c94476107086b703349365396d *R/clusterBS.ivreg.R
@@ -9,8 +9,8 @@ cebb78cf75c3a0a7e45b34ccc458ed19 *R/clusterIM.glm.R
 5ab95d4e7b032cfd9c3a567e2b694afd *R/clusterIM.mlogit.R
 0b0c443261ab8b0444c918fe95ecc35f *R/clusterwild.glm.R
 13af71824d41b8c63ada20aec31a58b1 *R/clusterwild.ivreg.R
-3de5fef7fcf2fbd90bcf7b1ca7eb5c1c *R/clusterwild.plm.R
-6d32b9af2e1775099cbe9a4dd4391c81 *R/zzz.R
+6a61553304f30a5d2ae50dab452af029 *R/clusterwild.plm.R
+4697c7c46772005160393f477f94ac50 *R/zzz.R
 5863f0a17eefb4b31bcdfdd1604127a0 *inst/CITATION
 4265edfc2cb074f25a9f7ce40ea9f2d2 *man/cluster.bs.glm.Rd
 8481d2d0c0edb9210ccfe9a5eacffde5 *man/cluster.bs.ivreg.Rd
@@ -21,4 +21,4 @@ db3bdfce461c19a15b417ac90da34719 *man/cluster.im.ivreg.Rd
 2409b97df18ac11fd7f53d793006451b *man/cluster.im.mlogit.Rd
 5fc347313fed40e88ad294435c1d2b18 *man/cluster.wild.glm.Rd
 449500115021efccef67e67bfe3e6011 *man/cluster.wild.ivreg.Rd
-f6b0dddff35eae5b02fca86443690dd5 *man/cluster.wild.plm.Rd
+328d547dc379a1b89e08e6ecdc8d74cf *man/cluster.wild.plm.Rd
