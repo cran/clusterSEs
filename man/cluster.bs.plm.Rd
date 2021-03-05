@@ -4,9 +4,18 @@
 \alias{cluster.bs.plm}
 \title{Pairs Cluster Bootstrapped p-Values For PLM}
 \usage{
-cluster.bs.plm(mod, dat, cluster = "group", ci.level = 0.95,
-  boot.reps = 1000, cluster.se = TRUE, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
+cluster.bs.plm(
+  mod,
+  dat,
+  cluster = "group",
+  ci.level = 0.95,
+  boot.reps = 1000,
+  cluster.se = TRUE,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A "within" model estimated using \code{plm}.}

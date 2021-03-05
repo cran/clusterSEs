@@ -49,6 +49,14 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
                            report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
                            seed=NULL){
   
+  # compensate for bizarre R formula updating bug
+  # thanks to Jason Thorpe for reporting!
+  form.old <- update(mod$formula, 1 ~ 1 )
+  while(form.old != mod$formula){
+    form.old <- mod$formula
+    invisible(mod <- update(mod, formula = .~.))
+  }
+  
   if(is.null(seed)==F){                                               # if user supplies a seed, set it
     
     tryCatch(set.seed(seed),
@@ -157,7 +165,12 @@ cluster.wild.plm<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
       p.store.s <- t(apply(X = abs(w.store), FUN = comp.fun, MARGIN = 1, vec1 = abs(w)))     # compare the BS test stats to orig. result
       crit.t <- apply(X = abs(w.store), MARGIN = 2, FUN = quantile, probs = ci.level)        # compute critical t-statistics for CIs
   }     
-  p.store <- 1 - (colSums(p.store.s)/boot.reps)                                              # calculate the cluster bootstrap p-value  
+  
+  if(dim(p.store.s)[1] == 1){
+    p.store <- 1 - ( sum(p.store.s) / boot.reps )                          # calculate the cluster bootstrap p-value
+  }else{
+    p.store <- 1 - ( colSums(p.store.s) / boot.reps )                          # calculate the cluster bootstrap p-value
+  }
 
   # compute confidence bounds
   ci.lo <- beta.mod - crit.t*se.clust

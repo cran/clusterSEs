@@ -22,7 +22,9 @@
 #' require(mlogit)
 #' data("Heating", package = "mlogit")
 #' H <- Heating
-#' H.ml <- mlogit.data(H, shape="wide", choice="depvar", varying=c(3:12))
+#' H$region <- as.numeric(H$region)
+#' H.ml <- dfidx(H, shape="wide", choice="depvar", varying=c(3:12),
+#'          idx = list(c("idcase", "region")))
 #' m <- mlogit(depvar~ic+oc, H.ml)
 #' 
 #' # compute cluster-adjusted p-values
@@ -30,14 +32,23 @@
 #' 
 #' }
 #' @rdname cluster.im.mlogit
-#' @importFrom mlogit mlogit mlogit.data hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
+#' @importFrom mlogit mlogit hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
 #' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Ibragimov, Rustam, and Ulrich K. Muller. 2010. "t-Statistic Based Correlation and Heterogeneity Robust Inference." \emph{Journal of Business & Economic Statistics} 28(4): 453-468. <DOI:10.1198/jbes.2009.08046>.
 #' @import stats
+#' @importFrom dfidx dfidx idx 
 #' @importFrom utils write.table
 #' @export
 
 cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, truncate = FALSE, return.vcv = FALSE){
+  
+  # compensate for bizarre R formula updating bug
+  # thanks to Jason Thorpe for reporting!
+  form.old <- update(mod$formula, 1 ~ 1 )
+  while(form.old != mod$formula){
+    form.old <- mod$formula
+    invisible(mod <- update(mod, formula = .~.))
+  }
   
   form <- mod$formula                                                    # what is the formula of this model?  
   variables <- all.vars(form)                                            # what variables are in this model?
@@ -49,14 +60,13 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
   
   # obtain the clustering variable
   clust.name <- all.vars(cluster)                                        # name of the cluster variable
-  dat.rs <- subset(dat, select = clust.name )                            # select cluster variable from data set
-  dat.rs$id.zz <- attr(dat, 'index')[used.idx,1]                                 # choice index
-  dat.rs$ti.zz <- attr(dat, 'index')[used.idx,2]                                 # alternative index
+  dat.rs <- as.data.frame(subset(idx(dat), select = clust.name ))        # select cluster variable from data set
+  dat.rs$id.zz <- idx(dat, n=1)                                          # choice index
+  dat.rs$ti.zz <- idx(dat, n=2)                                          # alternative index
   clust <- reshape(dat.rs, timevar="ti.zz",                              # reshape long to wide, store as clust
-          idvar=c("id.zz", clust.name), direction="wide")[[clust.name]]
+                   idvar=c("id.zz", clust.name), direction="wide")[[clust.name]]  
   if(sum(is.na(clust)>0)){stop("missing cluster indices")}               # check for missing cluster indices
-  G<-length(unique(clust))                                               # how many clusters are in this model?
-  
+  G <- length(unique(clust))                                             # how many clusters are in this model?
   
   b.clust<-matrix(data=NA, nrow=G, ncol=length(coefficients(mod)))            # store bootstrapped beta values
   

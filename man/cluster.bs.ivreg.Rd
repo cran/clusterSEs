@@ -4,9 +4,19 @@
 \alias{cluster.bs.ivreg}
 \title{Pairs Cluster Bootstrapped p-Values For Regression With Instrumental Variables}
 \usage{
-cluster.bs.ivreg(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  stratify = FALSE, cluster.se = TRUE, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
+cluster.bs.ivreg(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  boot.reps = 1000,
+  stratify = FALSE,
+  cluster.se = TRUE,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A model estimated using \code{ivreg}.}

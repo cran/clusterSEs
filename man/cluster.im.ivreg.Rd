@@ -4,8 +4,15 @@
 \alias{cluster.im.ivreg}
 \title{Cluster-Adjusted Confidence Intervals And p-Values For GLM}
 \usage{
-cluster.im.ivreg(mod, dat, cluster, ci.level = 0.95, report = TRUE,
-  drop = FALSE, return.vcv = FALSE)
+cluster.im.ivreg(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  report = TRUE,
+  drop = FALSE,
+  return.vcv = FALSE
+)
 }
 \arguments{
 \item{mod}{A model estimated using \code{ivreg}.}

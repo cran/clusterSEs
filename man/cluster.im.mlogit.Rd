@@ -4,8 +4,15 @@
 \alias{cluster.im.mlogit}
 \title{Cluster-Adjusted Confidence Intervals And p-Values For mlogit}
 \usage{
-cluster.im.mlogit(mod, dat, cluster, ci.level = 0.95, report = TRUE,
-  truncate = FALSE, return.vcv = FALSE)
+cluster.im.mlogit(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  report = TRUE,
+  truncate = FALSE,
+  return.vcv = FALSE
+)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -40,7 +47,9 @@ Confidence intervals are centered on the cluster averaged estimate, which can di
 require(mlogit)
 data("Heating", package = "mlogit")
 H <- Heating
-H.ml <- mlogit.data(H, shape="wide", choice="depvar", varying=c(3:12))
+H$region <- as.numeric(H$region)
+H.ml <- dfidx(H, shape="wide", choice="depvar", varying=c(3:12),
+         idx = list(c("idcase", "region")))
 m <- mlogit(depvar~ic+oc, H.ml)
 
 # compute cluster-adjusted p-values

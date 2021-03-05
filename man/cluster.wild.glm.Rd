@@ -4,9 +4,18 @@
 \alias{cluster.wild.glm}
 \title{Wild Cluster Bootstrapped p-Values For Linear Family GLM}
 \usage{
-cluster.wild.glm(mod, dat, cluster, ci.level = 0.95,
-  impose.null = TRUE, boot.reps = 1000, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
+cluster.wild.glm(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  impose.null = TRUE,
+  boot.reps = 1000,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A linear (identity link) model estimated using \code{glm}.}

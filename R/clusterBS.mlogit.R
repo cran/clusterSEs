@@ -10,7 +10,6 @@
 #' @param cluster.se Use clustered standard errors (= TRUE) or ordinary SEs (= FALSE) for bootstrap replicates.
 #' @param report Should a table of results be printed to the console?
 #' @param prog.bar Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).
-#' @param unique.id Should id (from \code{mlogit.data}) be made unique for bootstrap replicates (= TRUE) or repeated across replicates (= FALSE)?
 #' @param output.replicates Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?
 #' @param seed Random number seed for replicability (default is NULL).
 #'
@@ -25,14 +24,16 @@
 #' #######################################
 #' # example one: train ticket selection
 #' #######################################
-#' # see http://cran.r-project.org/web/packages/mlogit/vignettes/mlogit.pdf
 #' require(mlogit)
 #' data("Train", package="mlogit")
-#' Train$ch.id <- paste(Train$id, Train$choiceid, sep=".")
-#' Tr <- mlogit.data(Train, shape = "wide", choice = "choice", varying = 4:11,
-#'                   sep = "_", alt.levels = c(1, 2), id = "id")
+#' Train$choiceid <- 1:nrow(Train)
+#' 
+#' Tr <- dfidx(Train, shape = "wide", varying = 4:11, sep = "_", 
+#'           choice = "choice", idx = list(c("choiceid", "id")), 
+#'           idnames = c(NA, "alt"))
 #' Tr$price <- Tr$price/100 * 2.20371
 #' Tr$time <- Tr$time/60
+#' 
 #' ml.Train <- mlogit(choice ~ price + time + change + comfort | -1, Tr)
 #' 
 #' # compute pairs cluster bootstrapped p-values
@@ -46,7 +47,9 @@
 #' require(mlogit)
 #' data("Heating", package = "mlogit")
 #' H <- Heating
-#' H.ml <- mlogit.data(H, shape="wide", choice="depvar", varying=c(3:12))
+#' H$region <- as.numeric(H$region)
+#' H.ml <- dfidx(H, shape="wide", choice="depvar", varying=c(3:12),
+#'          idx = list(c("idcase", "region")))
 #' m <- mlogit(depvar~ic+oc, H.ml)
 #' 
 #' # compute pairs cluster bootstrapped p-values
@@ -55,20 +58,29 @@
 #' }
 #' @rdname cluster.bs.mlogit
 #' @import stats
+#' @importFrom dfidx dfidx idx idx_name
 #' @importFrom utils write.table
 #' @importFrom utils setTxtProgressBar
 #' @importFrom utils txtProgressBar
 #' @importFrom lmtest coeftest
 #' @importFrom sandwich estfun
 #' @importFrom sandwich sandwich
-#' @importFrom mlogit mlogit mlogit.data hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
+#' @importFrom mlogit mlogit hmftest mFormula is.mFormula mlogit.optim cov.mlogit cor.mlogit rpar scoretest med rg stdev qrpar prpar drpar
 #' @references Esarey, Justin, and Andrew Menger. 2017. "Practical and Effective Approaches to Dealing with Clustered Data." \emph{Political Science Research and Methods} forthcoming: 1-35. <URL:http://jee3.web.rice.edu/cluster-paper.pdf>.
 #' @references Cameron, A. Colin, Jonah B. Gelbach, and Douglas L. Miller. 2008. "Bootstrap-Based Improvements for Inference with Clustered Errors." \emph{The Review of Economics and Statistics} 90(3): 414-427. <DOI:10.1162/rest.90.3.414>.
 #' @export
 
 cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000, cluster.se = TRUE, 
-                            report = TRUE, prog.bar = TRUE, unique.id = TRUE, output.replicates = FALSE,
+                            report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
                             seed = NULL){
+  
+  # compensate for bizarre R formula updating bug
+  # thanks to Jason Thorpe for reporting!
+  form.old <- update(mod$formula, 1 ~ 1 )
+  while(form.old != mod$formula){
+    form.old <- mod$formula
+    invisible(mod <- update(mod, formula = .~.))
+  }
   
   if(is.null(seed)==F){                                               # if user supplies a seed, set it
     
@@ -88,13 +100,13 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
   
   # obtain the clustering variable
   clust.name <- all.vars(cluster)                                        # name of the cluster variable
-  dat.rs <- subset(dat, select = clust.name )                            # select cluster variable from data set
-  dat.rs$id.zz <- attr(dat, 'index')[used.idx,1]                         # choice index
-  dat.rs$ti.zz <- attr(dat, 'index')[used.idx,2]                         # alternative index
+  dat.rs <- as.data.frame(subset(idx(dat), select = clust.name ))        # select cluster variable from data set
+  dat.rs$id.zz <- idx(dat, n=1)                                          # choice index
+  dat.rs$ti.zz <- idx(dat, n=2)                                          # alternative index
   clust <- reshape(dat.rs, timevar="ti.zz",                              # reshape long to wide, store as clust
-         idvar=c("id.zz", clust.name), direction="wide")[[clust.name]]  
+        idvar=c("id.zz", clust.name), direction="wide")[[clust.name]]  
   if(sum(is.na(clust)>0)){stop("missing cluster indices")}               # check for missing cluster indices
-  G<-length(unique(clust))                                               # how many clusters are in this model?
+  G <- length(unique(clust))                                             # how many clusters are in this model?
   
   
   # load in a function to create clustered standard errors for mlogit models
@@ -158,41 +170,19 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
     }
     
     boot.dat <- dat[boot.ind,]                                                 # create the bootstrapped data
-    boot.dat$boot.clust <- boot.clust                                          # add boot-specific cluster variable
-    alt.num <- length(unique(attr(dat, "index")[,2]))                          # how many alternatives are there?
+    eval(parse(text=paste("boot.dat$idx[[\"", clust.name,                      # add boot-specific cluster variable
+                          "\"]]=boot.clust", sep="")))      
+    alt.num <- length(unique(idx(dat, n=2)))                                   # how many alternatives are there?
     ch.num <- round( dim(boot.dat)[1] / alt.num )                              # how many choices are there? (rounding for imprecision)
-    boot.dat$ch.idx <- rep(1:ch.num, each=alt.num)                             # create new choice index
-    boot.dat$alt.idx <- rep(unique(attr(dat, "index")[,2]), ch.num)            # create new alternative index
+    eval(parse(text=paste("boot.dat$idx[[\"",idx_name(dat, n=1),               # create new choice index
+                          "\"]]=rep(1:ch.num, each=alt.num)", sep="")))    
+#    eval(parse(text=paste("boot.dat$idx[[\"", idx_name(dat, n=2),             # create new alternative index
+#                          "\"]]=value=rep(1:alt.num, ch.num)", sep="")))
     rownames(boot.dat) <- NULL                                                 # purge old (duplicated) row names
     
-    # are there id variables?
-    if( dim( attr(dat, "index") )[2] == 3){
-      
-      boot.id <- attr(dat, "index")[boot.ind,3]                                 # capture the original ID variable
-      
-      if(unique.id == TRUE){                                                    # if making a unique identifier for each replicate...
-        
-        id.cx <- paste(boot.id,                                                 # create unique identifier (id . replicate)
-                       boot.clust, sep=".")
-        boot.dat$id.idx <- as.numeric(as.factor(id.cx))                         # make unique id numeric
-        boot.dat.ml <- mlogit.data(boot.dat, shape="long",                      # create mlogit-style boot data
-                 choice="depvar", chid.var="ch.idx", 
-                 alt.var="alt.idx", id.var="id.idx")
-      }else{                                                                    #...otherwise, keep the existing replicate
-        boot.dat$id.idx <- boot.id                                              # put existing id into the bootstrap data set
-        boot.dat.ml <- mlogit.data(boot.dat, shape="long",                      # create mlogit-style boot data
-                                   choice="depvar", chid.var="ch.idx", 
-                                   alt.var="alt.idx", id.var="id.idx")
-      }
-      
-    # if there's no id variable
-    }else{
-      boot.dat.ml <- mlogit.data(boot.dat, shape="long",                       # create mlogit-style boot data
-            choice="depvar", chid.var="ch.idx", alt.var="alt.idx")
-    }
     
     boot.mod.call <- mod$call                                                  # get original model call
-    boot.mod.call[[3]] <- quote(boot.dat.ml)                                   # modify call for bootstrap data set
+    boot.mod.call[[3]] <- quote(boot.dat)                                      # modify call for bootstrap data set
     
     boot.mod <- suppressWarnings(tryCatch(eval(boot.mod.call),                 # estimate model on bootstrap dataset
                             error = function(e){return(NULL)}))    
@@ -200,12 +190,13 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
     fail <- is.null(boot.mod)                                                  # determine whether the mlogit process created an error
     
     # obtain the bootstrap clustering variable
-    boot.dat.rs <- subset(boot.dat.ml, select = boot.clust )                   # select cluster variable from BS data set
-    boot.dat.rs$id.zz <- attr(boot.dat.ml, 'index')[,1]                        # choice index
-    boot.dat.rs$ti.zz <- attr(boot.dat.ml, 'index')[,2]                        # alternative index
+    boot.dat.rs <- as.data.frame(
+            subset(idx(boot.dat), select = clust.name ))                       # select cluster variable from BS data set
+    boot.dat.rs$id.zz <- idx(boot.dat, n=1)                                    # choice index
+    boot.dat.rs$ti.zz <- idx(boot.dat, n=2)                                    # alternative index
     boot.clust.n <- reshape(boot.dat.rs, timevar="ti.zz",                      # reshape long to wide, store as clust
-              idvar=c("id.zz", "boot.clust"),
-              direction="wide")[["boot.clust"]]  
+              idvar=c("id.zz", clust.name),
+              direction="wide")[[clust.name]]  
     
     if(fail==0){                                                     # proceed if the mlogit model was not in error
 

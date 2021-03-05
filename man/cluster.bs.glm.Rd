@@ -4,9 +4,19 @@
 \alias{cluster.bs.glm}
 \title{Pairs Cluster Bootstrapped p-Values For GLM}
 \usage{
-cluster.bs.glm(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  stratify = FALSE, cluster.se = TRUE, report = TRUE,
-  prog.bar = TRUE, output.replicates = FALSE, seed = NULL)
+cluster.bs.glm(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  boot.reps = 1000,
+  stratify = FALSE,
+  cluster.se = TRUE,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A model estimated using \code{glm}.}

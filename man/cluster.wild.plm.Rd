@@ -4,9 +4,17 @@
 \alias{cluster.wild.plm}
 \title{Wild Cluster Bootstrapped p-Values For PLM}
 \usage{
-cluster.wild.plm(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  report = TRUE, prog.bar = TRUE, output.replicates = FALSE,
-  seed = NULL)
+cluster.wild.plm(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  boot.reps = 1000,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A "within" model estimated using \code{plm}.}

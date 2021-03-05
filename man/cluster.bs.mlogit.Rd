@@ -4,9 +4,18 @@
 \alias{cluster.bs.mlogit}
 \title{Pairs Cluster Bootstrapped p-Values For mlogit}
 \usage{
-cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
-  cluster.se = TRUE, report = TRUE, prog.bar = TRUE,
-  unique.id = TRUE, output.replicates = FALSE, seed = NULL)
+cluster.bs.mlogit(
+  mod,
+  dat,
+  cluster,
+  ci.level = 0.95,
+  boot.reps = 1000,
+  cluster.se = TRUE,
+  report = TRUE,
+  prog.bar = TRUE,
+  output.replicates = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{mod}{A model estimated using \code{mlogit}.}
@@ -24,8 +33,6 @@ cluster.bs.mlogit(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000,
 \item{report}{Should a table of results be printed to the console?}
 
 \item{prog.bar}{Show a progress bar of the bootstrap (= TRUE) or not (= FALSE).}
-
-\item{unique.id}{Should id (from \code{mlogit.data}) be made unique for bootstrap replicates (= TRUE) or repeated across replicates (= FALSE)?}
 
 \item{output.replicates}{Should the cluster bootstrap coefficient replicates be output (= TRUE) or not (= FALSE)?}
 
@@ -48,14 +55,16 @@ Code to estimate GLM clustered standard errors by Mahmood Arai: http://thetarzan
 #######################################
 # example one: train ticket selection
 #######################################
-# see http://cran.r-project.org/web/packages/mlogit/vignettes/mlogit.pdf
 require(mlogit)
 data("Train", package="mlogit")
-Train$ch.id <- paste(Train$id, Train$choiceid, sep=".")
-Tr <- mlogit.data(Train, shape = "wide", choice = "choice", varying = 4:11,
-                  sep = "_", alt.levels = c(1, 2), id = "id")
+Train$choiceid <- 1:nrow(Train)
+
+Tr <- dfidx(Train, shape = "wide", varying = 4:11, sep = "_", 
+          choice = "choice", idx = list(c("choiceid", "id")), 
+          idnames = c(NA, "alt"))
 Tr$price <- Tr$price/100 * 2.20371
 Tr$time <- Tr$time/60
+
 ml.Train <- mlogit(choice ~ price + time + change + comfort | -1, Tr)
 
 # compute pairs cluster bootstrapped p-values
@@ -69,7 +78,9 @@ cluster.bs.tr <- cluster.bs.mlogit(ml.Train, Tr, ~ id, boot.reps=100)
 require(mlogit)
 data("Heating", package = "mlogit")
 H <- Heating
-H.ml <- mlogit.data(H, shape="wide", choice="depvar", varying=c(3:12))
+H$region <- as.numeric(H$region)
+H.ml <- dfidx(H, shape="wide", choice="depvar", varying=c(3:12),
+         idx = list(c("idcase", "region")))
 m <- mlogit(depvar~ic+oc, H.ml)
 
 # compute pairs cluster bootstrapped p-values
