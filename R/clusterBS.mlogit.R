@@ -79,7 +79,7 @@ cluster.bs.mlogit<-function(mod, dat, cluster, ci.level = 0.95, boot.reps = 1000
   form.old <- update(mod$formula, 1 ~ 1 )
   while(form.old != mod$formula){
     form.old <- mod$formula
-    invisible(mod <- update(mod, formula = .~.))
+    invisible(mod <- update(mod, new = .~.))
   }
   
   if(is.null(seed)==F){                                               # if user supplies a seed, set it

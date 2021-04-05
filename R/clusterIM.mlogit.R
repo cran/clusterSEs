@@ -47,7 +47,7 @@ cluster.im.mlogit<-function(mod, dat, cluster, ci.level = 0.95, report = TRUE, t
   form.old <- update(mod$formula, 1 ~ 1 )
   while(form.old != mod$formula){
     form.old <- mod$formula
-    invisible(mod <- update(mod, formula = .~.))
+    invisible(mod <- update(mod, new = .~.))
   }
   
   form <- mod$formula                                                    # what is the formula of this model?  

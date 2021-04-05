@@ -1,12 +1,12 @@
-bc5d75fcbf9afa64661efb70c549dacf *DESCRIPTION
+c59ad14cc01464eb686d6088a985b921 *DESCRIPTION
 1d242520b31267b8f5a6139118d98ca0 *NAMESPACE
 be803e41ee39e88ea32281b75b758f62 *R/clusterBS.glm.R
 a6bd76c94476107086b703349365396d *R/clusterBS.ivreg.R
-018913d7fab6dbb6d53f7ad7279e7312 *R/clusterBS.mlogit.R
+5824d76136c48ac16a65af98e225e898 *R/clusterBS.mlogit.R
 0e8054e35f48808163d1f8db43ecb0d4 *R/clusterBS.plm.R
 cebb78cf75c3a0a7e45b34ccc458ed19 *R/clusterIM.glm.R
 05fad93b0fa878c18cdf3ce3b0103f53 *R/clusterIM.ivreg.R
-d0fdd8812b2a770fcaa8b6730e8dd45c *R/clusterIM.mlogit.R
+1acb0dc03094f5e660891239afe8985a *R/clusterIM.mlogit.R
 a0565a9eecdf4a3c38304b1c1bef240b *R/clusterwild.glm.R
 8cb8c49300439bbdc543ddbd0afcc22e *R/clusterwild.ivreg.R
 290b4c181a3723f8b9391d5cf65d149d *R/clusterwild.plm.R
